@@ -267,22 +267,23 @@ $nonce         = wp_create_nonce('sportedia_nonce');
         <div class="sp-timer-bar">
             <div id="spTimerProgress" class="sp-timer-progress"></div>
         </div>
-        <div id="spTimerText" style="font-size: 12px; color: var(--sp-muted); margin-bottom: 16px;">Refreshing code in 5.0s</div>
-
-        <?php if (is_user_logged_in()) : ?>
-            <button type="button" class="sp-btn" onclick="scanEmployeeToken()">
-                Scan Staff Attendance Code
-            </button>
-        <?php else : ?>
-            <p style="font-size: 12px; color: var(--sp-muted); margin: 0;">Log in to submit employee attendance scan.</p>
-        <?php endif; ?>
+        <div id="spTimerText" style="font-size: 12px; color: var(--sp-muted); margin-bottom: 12px;">Refreshing code in 5.0s</div>
+        <div style="font-size: 12px; color: var(--sp-muted);">
+            Scan code using kiosk or mobile reader to record employee check-in or check-out.
+        </div>
     </div>
 
-    <!-- MODE 2: Member Verification (Session Deduction) -->
+    <!-- MODE 2: Member Verification (Session Deduction & Camera Scanner) -->
     <div id="verifyMemberMode" style="display: none;">
-        <p style="font-size: 13px; color: var(--sp-muted); margin-top: 0; margin-bottom: 16px;">
-            Scan or enter permanent Member ID / Barcode to verify membership and deduct 1 session.
+        <p style="font-size: 13px; color: var(--sp-muted); margin-top: 0; margin-bottom: 12px;">
+            Scan card using camera or barcode reader, or enter Member ID manually to verify membership and deduct 1 session.
         </p>
+
+        <!-- Camera Scanner Stream Container -->
+        <div id="spCameraWrapper" style="margin-bottom: 16px; display: none;">
+            <video id="spCameraPreview" autoplay playsinline style="width: 100%; max-height: 220px; border-radius: var(--sp-radius); background: #000; object-fit: cover; border: 1px solid var(--sp-border);"></video>
+            <div id="spCameraStatus" style="font-size: 11px; color: var(--sp-muted); margin-top: 4px; text-align: center;">Requesting camera access...</div>
+        </div>
 
         <form id="spMemberVerifyForm">
             <input type="text" id="sp_member_barcode" class="sp-input" placeholder="Scan or Enter Member ID / Barcode..." required autofocus>
@@ -315,6 +316,12 @@ var nonce = "<?php echo esc_js($nonce); ?>";
 var refreshInterval = 5000;
 var lastFetchTime = Date.now();
 
+var videoStream = null;
+var scanInterval = null;
+var isProcessingScan = false;
+var lastScannedCode = '';
+var lastScanTime = 0;
+
 function switchVerifyTab(mode) {
     if (mode === 'member') {
         $('#tabMemberBtn').addClass('active');
@@ -322,12 +329,81 @@ function switchVerifyTab(mode) {
         $('#verifyAttendanceMode').hide();
         $('#verifyMemberMode').show();
         $('#sp_member_barcode').focus();
+        startCameraScan();
     } else {
         $('#tabAttendanceBtn').addClass('active');
         $('#tabMemberBtn').removeClass('active');
         $('#verifyMemberMode').hide();
         $('#verifyAttendanceMode').show();
+        stopCameraScan();
     }
+}
+
+function startCameraScan() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        $('#spCameraStatus').text('Camera API not supported on this browser.');
+        $('#spCameraWrapper').show();
+        return;
+    }
+
+    $('#spCameraWrapper').show();
+    $('#spCameraStatus').text('Requesting camera permission...');
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(function(stream) {
+            videoStream = stream;
+            var videoElem = document.getElementById('spCameraPreview');
+            videoElem.srcObject = stream;
+            videoElem.play();
+            $('#spCameraStatus').text('Camera active. Place barcode or QR code in view.');
+
+            if ('BarcodeDetector' in window) {
+                var detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'qr_code', 'ean_13', 'upc_a'] });
+                scanInterval = setInterval(function() {
+                    if (videoElem.readyState === videoElem.HAVE_ENOUGH_DATA) {
+                        detector.detect(videoElem).then(function(barcodes) {
+                            if (barcodes.length > 0) {
+                                var rawValue = barcodes[0].rawValue;
+                                if (rawValue) {
+                                    processScannedBarcode(rawValue);
+                                }
+                            }
+                        }).catch(function(err) {});
+                    }
+                }, 300);
+            } else {
+                $('#spCameraStatus').text('Camera active. (Hardware scanner or input below available)');
+            }
+        })
+        .catch(function(err) {
+            $('#spCameraStatus').text('Camera permission pending or unavailable: ' + err.message);
+        });
+}
+
+function stopCameraScan() {
+    if (scanInterval) {
+        clearInterval(scanInterval);
+        scanInterval = null;
+    }
+    if (videoStream) {
+        videoStream.getTracks().forEach(function(track) { track.stop(); });
+        videoStream = null;
+    }
+    $('#spCameraWrapper').hide();
+}
+
+function processScannedBarcode(code) {
+    var now = Date.now();
+    if (isProcessingScan || (code === lastScannedCode && (now - lastScanTime) < 3000)) {
+        return;
+    }
+    isProcessingScan = true;
+    lastScannedCode = code;
+    lastScanTime = now;
+
+    $('#sp_member_barcode').val(code);
+    $('#spMemberVerifyForm').trigger('submit');
+    setTimeout(function() { isProcessingScan = false; }, 2000);
 }
 
 function generateBarcodeSVG(text) {
@@ -381,21 +457,6 @@ setInterval(function() {
         updateCode();
     }
 }, 100);
-
-function scanEmployeeToken() {
-    $.ajax({
-        url: ajaxUrl,
-        type: 'POST',
-        data: {
-            action: 'sportedia_process_employee_scan',
-            nonce: nonce,
-            qr_token: currentToken
-        },
-        success: function(res) {
-            alert(res.data.message || (res.success ? 'Attendance recorded!' : res.data));
-        }
-    });
-}
 
 $('#spMemberVerifyForm').on('submit', function(e) {
     e.preventDefault();

@@ -267,7 +267,7 @@ class Sportedia_Subscription_Manager {
             wp_send_json_error('Please scan or enter a valid Member ID / Barcode.');
         }
 
-        // 1. Locate member by sportedia_employee_id
+        // Search user by sportedia_employee_id, sportedia_phone, login, email, or ID
         $users = get_users(array(
             'meta_key'   => 'sportedia_employee_id',
             'meta_value' => $barcode,
@@ -275,8 +275,17 @@ class Sportedia_Subscription_Manager {
         ));
 
         if (empty($users)) {
+            $users = get_users(array(
+                'meta_key'   => 'sportedia_phone',
+                'meta_value' => $barcode,
+                'number'     => 1,
+            ));
+        }
+
+        if (empty($users)) {
             $user_obj = get_user_by('login', $barcode);
             if (!$user_obj) $user_obj = get_user_by('email', $barcode);
+            if (!$user_obj && is_numeric($barcode)) $user_obj = get_user_by('id', intval($barcode));
             if ($user_obj) $users = array($user_obj);
         }
 
@@ -287,22 +296,25 @@ class Sportedia_Subscription_Manager {
         $member = $users[0];
         $member_id = $member->ID;
         $emp_id = get_user_meta($member_id, 'sportedia_employee_id', true);
-        if (empty($emp_id)) $emp_id = $barcode;
+        if (empty($emp_id)) $emp_id = 'MEM-' . $member_id;
 
-        // 2. Find active subscription
+        // Find active subscription
         global $wpdb;
         $subs_table = $wpdb->prefix . 'sportedia_subscriptions';
         $att_table  = $wpdb->prefix . 'sportedia_attendance';
 
         self::auto_update_expired_subscriptions();
 
+        $today = date('Y-m-d');
         $sub = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $subs_table WHERE user_id = %d AND status = 'active' ORDER BY id DESC LIMIT 1",
-            $member_id
+            "SELECT * FROM $subs_table WHERE user_id = %d AND status = 'active' AND start_date <= %s AND end_date >= %s ORDER BY id DESC LIMIT 1",
+            $member_id,
+            $today,
+            $today
         ), ARRAY_A);
 
         if (!$sub) {
-            wp_send_json_error('No sessions remaining for this member.');
+            wp_send_json_error('No active subscription found or plan expired for member: ' . $member->display_name);
         }
 
         $total_sessions = intval($sub['sessions_count']);
@@ -312,14 +324,19 @@ class Sportedia_Subscription_Manager {
         $remaining      = $total_sessions - $used_sessions;
 
         if ($remaining <= 0) {
-            wp_send_json_error('No sessions remaining for this member.');
+            wp_send_json_error('No sessions remaining for member: ' . $member->display_name);
         }
 
-        // 3. Deduct 1 session
+        // Deduct 1 session
         $new_used = $used_sessions + 1;
         $new_remaining = $total_sessions - $new_used;
 
-        $wpdb->update($subs_table, array('sessions_used' => $new_used), array('id' => $sub['id']));
+        $update_data = array('sessions_used' => $new_used);
+        if ($new_remaining <= 0) {
+            $update_data['status'] = 'completed';
+        }
+
+        $wpdb->update($subs_table, $update_data, array('id' => $sub['id']));
 
         // Record attendance entry
         $wpdb->insert($att_table, array(

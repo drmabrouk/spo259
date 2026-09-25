@@ -30,7 +30,7 @@ class Sportedia_Page_Generator {
             wp_update_post(array('ID' => $dash_page_id, 'post_status' => 'publish'));
         }
 
-        // 2. Verification / Kiosk Page ('sportedia-kiosk') -> <!-- sportedia_kiosk -->
+        // 2. Verification System Page ('sportedia-kiosk' / 'sportedia-verify') -> <!-- sportedia_kiosk -->
         $kiosk_page_id = get_option('sportedia_kiosk_page_id');
         if (!$kiosk_page_id || !get_post($kiosk_page_id)) {
             $kiosk_by_slug = get_page_by_path('sportedia-kiosk');
@@ -44,7 +44,7 @@ class Sportedia_Page_Generator {
                 $kiosk_page_id = $kiosk_by_slug->ID;
             } else {
                 $kiosk_data = array(
-                    'post_title'     => 'Sportedia Verification & Kiosk',
+                    'post_title'     => 'Verification System',
                     'post_name'      => 'sportedia-kiosk',
                     'post_content'   => '<!-- sportedia_kiosk -->[sportedia_kiosk]',
                     'post_status'    => 'publish',
