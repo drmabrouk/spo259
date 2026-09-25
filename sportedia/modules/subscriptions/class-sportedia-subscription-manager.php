@@ -37,7 +37,7 @@ class Sportedia_Subscription_Manager {
         $params = array();
 
         if ($branch_id > 0) {
-            $where[] = 's.branch_id = %d';
+            $where[] = '(s.branch_id = %d OR s.branch_id = 0)';
             $params[] = $branch_id;
         }
 
@@ -74,7 +74,14 @@ class Sportedia_Subscription_Manager {
             }
 
             if (!empty($search)) {
-                if (stripos($user_name, $search) === false && stripos($row['plan_name'], $search) === false && stripos($emp_id, $search) === false && stripos($user_phone, $search) === false) {
+                $s = strtolower(trim($search));
+                $match = (stripos(strtolower($user_name), $s) !== false) ||
+                         (stripos(strtolower($row['plan_name']), $s) !== false) ||
+                         (stripos(strtolower($emp_id), $s) !== false) ||
+                         (stripos(strtolower($user_phone), $s) !== false) ||
+                         (!empty($row['invoice_number']) && stripos(strtolower($row['invoice_number']), $s) !== false);
+
+                if (!$match) {
                     continue;
                 }
             }
