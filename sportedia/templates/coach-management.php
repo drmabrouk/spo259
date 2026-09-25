@@ -6,6 +6,16 @@ $branch_filter = isset($_GET['branch_filter']) ? intval($_GET['branch_filter']) 
 
 $coachesList  = Sportedia_Coach_Manager::get_coaches_summary($search, $branch_filter);
 $branchesList = Sportedia_Branch_Manager::get_branches();
+
+$curr_u = wp_get_current_user();
+$admin_roles = array('sportedia_sys_admin', 'sportedia_general_mgr', 'sportedia_facility_mgr', 'sportedia_ops_mgr', 'sportedia_finance_mgr', 'administrator');
+$can_view_session_count = false;
+foreach ((array)$curr_u->roles as $r) {
+    if (in_array($r, $admin_roles, true) || current_user_can('manage_options')) {
+        $can_view_session_count = true;
+        break;
+    }
+}
 ?>
 
 <div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
@@ -35,7 +45,7 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
                 <th>Contact</th>
                 <th>Assigned Programs</th>
                 <th>Active Members</th>
-                <th>Completed Verified Sessions</th>
+                <?php if ($can_view_session_count) : ?><th>Completed Verified Sessions</th><?php endif; ?>
                 <th style="text-align: right;">History</th>
             </tr>
         </thead>
@@ -53,9 +63,11 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
                         </td>
                         <td><span class="sp-badge"><?php echo esc_html($c['assigned_programs']); ?> Programs</span></td>
                         <td><span class="sp-badge"><?php echo esc_html($c['assigned_members']); ?> Members</span></td>
-                        <td>
-                            <strong style="font-size: 15px; color: #166534;"><?php echo esc_html($c['completed_sessions']); ?></strong> sessions
-                        </td>
+                        <?php if ($can_view_session_count) : ?>
+                            <td>
+                                <strong style="font-size: 15px; color: #166534;"><?php echo esc_html($c['completed_sessions']); ?></strong> sessions
+                            </td>
+                        <?php endif; ?>
                         <td style="text-align: right;">
                             <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='viewCoachStats(<?php echo json_encode($c); ?>)'>Session History</button>
                         </td>

@@ -248,6 +248,20 @@ class Sportedia_Subscription_Manager {
     public function ajax_verify_member_session() {
         check_ajax_referer('sportedia_nonce', 'nonce');
 
+        $current_u = wp_get_current_user();
+        $allowed_roles = array('sportedia_sys_admin', 'sportedia_general_mgr', 'sportedia_facility_mgr', 'administrator');
+        $user_roles = (array) $current_u->roles;
+        $has_perm = false;
+        foreach ($user_roles as $r) {
+            if (in_array($r, $allowed_roles, true) || current_user_can('manage_options')) {
+                $has_perm = true;
+                break;
+            }
+        }
+        if (!$has_perm) {
+            wp_send_json_error('Access Denied. Session verification is restricted to System Administrators, General Managers, and Facility Managers.');
+        }
+
         $barcode = isset($_POST['member_barcode']) ? sanitize_text_field($_POST['member_barcode']) : '';
         if (empty($barcode)) {
             wp_send_json_error('Please scan or enter a valid Member ID / Barcode.');

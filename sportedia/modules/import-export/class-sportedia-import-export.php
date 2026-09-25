@@ -19,11 +19,22 @@ class Sportedia_Import_Export {
     public function handle_export_csv() {
         check_ajax_referer('sportedia_nonce', 'nonce');
 
-        if (!current_user_can('sportedia_view_reports') && !Sportedia_Roles::is_sys_admin()) {
-            wp_die('Unauthorized');
+        $curr_u = wp_get_current_user();
+        $admin_roles = array('sportedia_sys_admin', 'sportedia_general_mgr', 'sportedia_facility_mgr', 'sportedia_ops_mgr', 'sportedia_finance_mgr', 'administrator');
+        $has_perm = false;
+        foreach ((array)$curr_u->roles as $r) {
+            if (in_array($r, $admin_roles, true) || current_user_can('sportedia_import_export') || current_user_can('manage_options')) {
+                $has_perm = true;
+                break;
+            }
+        }
+
+        if (!$has_perm) {
+            wp_die('Unauthorized. Export functionality is restricted to authorized administrative users.');
         }
 
         $type = isset($_GET['export_type']) ? sanitize_text_field($_GET['export_type']) : 'users';
+        Sportedia_DB::log_activity('csv_export', 'Exported ' . $type . ' CSV dataset.');
 
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename=sportedia_' . $type . '_' . date('Y-m-d') . '.csv');
@@ -77,8 +88,18 @@ class Sportedia_Import_Export {
     public function handle_import_csv() {
         check_ajax_referer('sportedia_nonce', 'nonce');
 
-        if (!current_user_can('sportedia_manage_users') && !Sportedia_Roles::is_sys_admin()) {
-            wp_send_json_error('Unauthorized');
+        $curr_u = wp_get_current_user();
+        $admin_roles = array('sportedia_sys_admin', 'sportedia_general_mgr', 'sportedia_facility_mgr', 'administrator');
+        $has_perm = false;
+        foreach ((array)$curr_u->roles as $r) {
+            if (in_array($r, $admin_roles, true) || current_user_can('sportedia_import_export') || current_user_can('manage_options')) {
+                $has_perm = true;
+                break;
+            }
+        }
+
+        if (!$has_perm) {
+            wp_send_json_error('Unauthorized. CSV Import is restricted to authorized administrative users.');
         }
 
         if (empty($_FILES['csv_file']['tmp_name'])) {
@@ -133,6 +154,7 @@ class Sportedia_Import_Export {
         }
 
         fclose($handle);
+        Sportedia_DB::log_activity('csv_import', 'Imported ' . $imported_count . ' users via CSV.');
         wp_send_json_success('Successfully imported ' . $imported_count . ' users without duplicates.');
     }
 }
