@@ -436,15 +436,15 @@ body.sportedia-app-body {
   }
 }
 
-/* Printable Invoice CSS Rules */
+/* Printable A5 Invoice & A6 Card CSS Rules */
 @media print {
   body * {
     visibility: hidden;
   }
-  #spPrintableInvoice, #spPrintableInvoice * {
+  #spPrintableInvoice, #spPrintableInvoice *, #spPrintableCard, #spPrintableCard * {
     visibility: visible;
   }
-  #spPrintableInvoice {
+  #spPrintableInvoice, #spPrintableCard {
     position: absolute;
     left: 0;
     top: 0;

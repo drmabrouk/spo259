@@ -43,6 +43,7 @@ class Sportedia_DB {
             user_id bigint(20) UNSIGNED NOT NULL,
             branch_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
             program_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
+            coach_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
             plan_name varchar(191) NOT NULL,
             subscription_type varchar(50) DEFAULT 'monthly' NOT NULL,
             sessions_count int(11) DEFAULT 12 NOT NULL,
@@ -55,7 +56,8 @@ class Sportedia_DB {
             created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
             PRIMARY KEY  (id),
             KEY user_id (user_id),
-            KEY branch_id (branch_id)
+            KEY branch_id (branch_id),
+            KEY coach_id (coach_id)
         ) $charset_collate;";
 
         // 4. Programs Table

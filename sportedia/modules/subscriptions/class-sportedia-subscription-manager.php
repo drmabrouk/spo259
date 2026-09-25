@@ -62,6 +62,16 @@ class Sportedia_Subscription_Manager {
             $user_name  = $user ? $user->display_name : 'Unknown Member';
             $emp_id     = get_user_meta($row['user_id'], 'sportedia_employee_id', true);
             $user_phone = get_user_meta($row['user_id'], 'sportedia_phone', true);
+            $user_dob   = get_user_meta($row['user_id'], 'sportedia_dob', true);
+
+            $coach_user = !empty($row['coach_id']) ? get_userdata($row['coach_id']) : null;
+            $coach_name = $coach_user ? $coach_user->display_name : 'Unassigned Coach';
+
+            $branch_name = 'All Branches';
+            if ($row['branch_id'] > 0) {
+                $b = $wpdb->get_row($wpdb->prepare("SELECT branch_name FROM {$wpdb->prefix}sportedia_branches WHERE id = %d", $row['branch_id']));
+                if ($b) $branch_name = $b->branch_name;
+            }
 
             if (!empty($search)) {
                 if (stripos($user_name, $search) === false && stripos($row['plan_name'], $search) === false && stripos($emp_id, $search) === false && stripos($user_phone, $search) === false) {
@@ -72,6 +82,9 @@ class Sportedia_Subscription_Manager {
             $row['member_name']  = $user_name;
             $row['employee_id']  = $emp_id;
             $row['member_phone'] = $user_phone;
+            $row['member_dob']   = $user_dob ? $user_dob : 'N/A';
+            $row['coach_name']   = $coach_name;
+            $row['branch_name']  = $branch_name;
             $subscriptions[]     = $row;
         }
 
@@ -93,6 +106,7 @@ class Sportedia_Subscription_Manager {
         $user_id        = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
         $branch_id      = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
         $program_id     = isset($_POST['program_id']) ? intval($_POST['program_id']) : 0;
+        $coach_id       = isset($_POST['coach_id']) ? intval($_POST['coach_id']) : 0;
         $plan_name      = sanitize_text_field($_POST['plan_name']);
         $sub_type       = sanitize_text_field($_POST['subscription_type']);
         $start_date     = sanitize_text_field($_POST['start_date']);
@@ -104,6 +118,7 @@ class Sportedia_Subscription_Manager {
         // New member inputs
         $member_name    = sanitize_text_field($_POST['member_name']);
         $member_phone   = sanitize_text_field($_POST['member_phone']);
+        $member_dob     = sanitize_text_field($_POST['member_dob']);
         $member_id      = sanitize_text_field($_POST['member_id']);
         $member_email   = sanitize_email($_POST['member_email']);
         $member_pass    = isset($_POST['member_password']) ? $_POST['member_password'] : '';
@@ -153,6 +168,7 @@ class Sportedia_Subscription_Manager {
 
                 update_user_meta($user_id, 'sportedia_employee_id', $member_id);
                 update_user_meta($user_id, 'sportedia_phone', $member_phone);
+                if (!empty($member_dob)) update_user_meta($user_id, 'sportedia_dob', $member_dob);
                 update_user_meta($user_id, 'sportedia_status', 'active');
 
                 if ($branch_id > 0) {
@@ -167,11 +183,24 @@ class Sportedia_Subscription_Manager {
 
         $invoice_number = 'INV-' . date('Ymd') . '-' . rand(1000, 9999);
 
+        // If coach_id is not manually passed, fetch assigned coach from Program
+        if ($coach_id <= 0 && $program_id > 0) {
+            $prog_row = $wpdb->get_row($wpdb->prepare("SELECT coach_id FROM {$wpdb->prefix}sportedia_programs WHERE id = %d", $program_id));
+            if ($prog_row) $coach_id = intval($prog_row->coach_id);
+        }
+
+        $coach_user = $coach_id > 0 ? get_userdata($coach_id) : null;
+        $coach_name = $coach_user ? $coach_user->display_name : 'Assigned Coach';
+
+        $branch_obj = $branch_id > 0 ? $wpdb->get_row($wpdb->prepare("SELECT branch_name FROM {$wpdb->prefix}sportedia_branches WHERE id = %d", $branch_id)) : null;
+        $branch_name = $branch_obj ? $branch_obj->branch_name : 'All Branches';
+
         $data = array(
             'invoice_number'    => $invoice_number,
             'user_id'           => $user_id,
             'branch_id'         => $branch_id,
             'program_id'        => $program_id,
+            'coach_id'          => $coach_id,
             'plan_name'         => $plan_name,
             'subscription_type' => $sub_type,
             'start_date'        => $start_date,
@@ -181,7 +210,7 @@ class Sportedia_Subscription_Manager {
             'status'            => $status,
         );
 
-        $format = array('%s', '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%f', '%s', '%s');
+        $format = array('%s', '%d', '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%f', '%s', '%s');
 
         if ($sub_id > 0) {
             unset($data['invoice_number']);
@@ -203,7 +232,10 @@ class Sportedia_Subscription_Manager {
             'user_id'        => $user_id,
             'member_name'    => $member_name,
             'member_phone'   => $member_phone,
+            'member_dob'     => !empty($member_dob) ? $member_dob : 'N/A',
             'member_id'      => $member_id,
+            'branch_name'    => $branch_name,
+            'coach_name'     => $coach_name,
             'plan_name'      => $plan_name,
             'start_date'     => $start_date,
             'end_date'       => $end_date,

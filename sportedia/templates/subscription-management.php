@@ -91,6 +91,7 @@ $programsList  = Sportedia_Program_Manager::get_programs();
                             </span>
                         </td>
                         <td style="text-align: right;">
+                            <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='viewA6Card(<?php echo json_encode($s); ?>)'>Card</button>
                             <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editSub(<?php echo json_encode($s); ?>)'>Edit</button>
                             <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteSub(<?php echo $s['id']; ?>)">Delete</button>
                         </td>
@@ -146,14 +147,19 @@ $programsList  = Sportedia_Program_Manager::get_programs();
 
                 <div style="display: flex; gap: 12px;">
                     <div class="sp-form-group" style="flex: 1;">
+                        <input type="date" id="sp_member_dob" name="member_dob" class="sp-floating-input">
+                        <label for="sp_member_dob" class="sp-floating-label">Date of Birth</label>
+                    </div>
+
+                    <div class="sp-form-group" style="flex: 1;">
                         <input type="text" id="sp_member_id" name="member_id" class="sp-floating-input" placeholder=" ">
                         <label for="sp_member_id" class="sp-floating-label">Member ID (Auto-generated if empty)</label>
                     </div>
+                </div>
 
-                    <div class="sp-form-group" style="flex: 1; display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" id="sp_activate_account" name="activate_account" value="1" checked onchange="toggleActivationFields()">
-                        <label for="sp_activate_account" style="font-size: 13px; font-weight: 600;">Account Activation Enabled</label>
-                    </div>
+                <div class="sp-form-group" style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="sp_activate_account" name="activate_account" value="1" checked onchange="toggleActivationFields()">
+                    <label for="sp_activate_account" style="font-size: 13px; font-weight: 600;">Account Activation Enabled</label>
                 </div>
 
                 <div id="spActivationFields" style="display: flex; gap: 12px;">
@@ -291,6 +297,9 @@ $programsList  = Sportedia_Program_Manager::get_programs();
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                 Print Invoice
             </button>
+                <button type="button" class="sp-btn sp-btn-primary" onclick="openA6CardFromInvoice()">
+                    View A6 Card
+                </button>
             <a id="inv_whatsapp_link" href="#" target="_blank" class="sp-btn sp-btn-primary" style="background-color: #16a34a; border-color: #16a34a;">
                 Send via WhatsApp
             </a>
@@ -298,6 +307,69 @@ $programsList  = Sportedia_Program_Manager::get_programs();
         </div>
     </div>
 </div>
+
+    <!-- A6 Membership Card Printable Modal -->
+    <div id="spCardModal" class="sp-modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:2200; align-items:center; justify-content:center;">
+        <div class="sp-card" style="width: 100%; max-width: 420px; margin: 20px; padding: 0; background: #ffffff; border-radius: 12px; overflow: hidden; border: 2px solid #000000;" id="spPrintableCard">
+            <!-- Card Header -->
+            <div style="background: #000000; color: #ffffff; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 32px; height: 32px; background: #ffffff; color: #000000; font-weight: 800; border-radius: 6px; display: flex; align-items: center; justify-content: center;">S</div>
+                    <div>
+                        <strong style="font-size: 16px; display: block; letter-spacing: -0.5px;">Sportedia</strong>
+                        <span style="font-size: 10px; opacity: 0.8; text-transform: uppercase;">A6 Official Membership Card</span>
+                    </div>
+                </div>
+                <span id="card_branch_badge" style="font-size: 10px; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 4px;">Main Branch</span>
+            </div>
+
+            <!-- Card Body -->
+            <div style="padding: 20px; font-size: 13px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                    <div>
+                        <div style="font-size: 10px; color: var(--sp-text-muted); text-transform: uppercase;">Member Name</div>
+                        <strong id="card_member_name" style="font-size: 16px; color: #000000;">John Doe</strong>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 10px; color: var(--sp-text-muted); text-transform: uppercase;">Member ID</div>
+                        <strong id="card_member_id" style="font-size: 14px; font-family: monospace;">MEM-1001</strong>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #e5e7eb;">
+                    <div>
+                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">PROGRAM</span>
+                        <strong id="card_program" style="font-size: 12px; color: #000000;">Football Training</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">ASSIGNED COACH</span>
+                        <strong id="card_coach" style="font-size: 12px; color: #000000;">Coach Alex</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">START DATE</span>
+                        <span id="card_start_date" style="font-size: 12px;">2026-03-01</span>
+                    </div>
+                    <div>
+                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">DATE OF BIRTH</span>
+                        <span id="card_dob" style="font-size: 12px;">1998-05-15</span>
+                    </div>
+                </div>
+
+                <!-- Barcode Representation -->
+                <div style="text-align: center; border-top: 1px dashed #e5e7eb; padding-top: 12px;">
+                    <div id="card_barcode_lines" style="display: flex; justify-content: center; gap: 2px; height: 45px; margin-bottom: 6px;"></div>
+                    <span id="card_barcode_text" style="font-family: monospace; font-size: 12px; font-weight: 700; letter-spacing: 2px; color: #000000;">*MEM-1001*</span>
+                </div>
+            </div>
+
+            <!-- Card Actions -->
+            <div style="padding: 12px 20px; background: #f8f9fa; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; justify-content: flex-end;" class="sp-no-print">
+                <button type="button" class="sp-btn sp-btn-secondary sp-btn-sm" onclick="window.print()">Print A6 Card</button>
+                <a id="card_whatsapp_link" href="#" target="_blank" class="sp-btn sp-btn-primary sp-btn-sm" style="background-color: #16a34a; border-color: #16a34a;">Share Card WhatsApp</a>
+                <button type="button" class="sp-btn sp-btn-secondary sp-btn-sm" onclick="spCloseModal('spCardModal'); location.reload();">Close</button>
+            </div>
+        </div>
+    </div>
 
 <script>
 function setSubMode(mode) {
@@ -395,12 +467,59 @@ function deleteSub(subId) {
     }
 }
 
+var latestSubData = null;
+
+function renderBarcodeLines(containerId, text) {
+    var $box = jQuery('#' + containerId).empty();
+    var hash = 0;
+    for (var i = 0; i < text.length; i++) hash = text.charCodeAt(i) + ((hash << 5) - hash);
+    for (var j = 0; j < 30; j++) {
+        var w = (Math.abs(hash + j * 7) % 4) + 1;
+        $box.append(jQuery('<div>').css({ background: '#000', width: w + 'px', height: '100%', borderRadius: '1px' }));
+    }
+}
+
+function viewA6Card(s) {
+    var mName = s.member_name || s.name || 'Member';
+    var mId = s.employee_id || s.member_id || 'MEM-1001';
+    var mPhone = s.member_phone || s.phone || '';
+    var mDob = s.member_dob || s.dob || 'N/A';
+    var pName = s.plan_name || s.program_name || 'Training Program';
+    var cName = s.coach_name || 'Assigned Coach';
+    var bName = s.branch_name || 'Main Branch';
+    var sDate = s.start_date || new Date().toISOString().split('T')[0];
+
+    jQuery('#card_member_name').text(mName);
+    jQuery('#card_member_id').text(mId);
+    jQuery('#card_branch_badge').text(bName);
+    jQuery('#card_program').text(pName);
+    jQuery('#card_coach').text(cName);
+    jQuery('#card_start_date').text(sDate);
+    jQuery('#card_dob').text(mDob);
+    jQuery('#card_barcode_text').text('*' + mId + '*');
+    renderBarcodeLines('card_barcode_lines', mId);
+
+    var cleanPhone = mPhone.replace(/[^0-9]/g, '');
+    var waText = encodeURIComponent("Hello " + mName + ",\n\nHere is your Sportedia Official Membership Card:\nMember ID: " + mId + "\nProgram: " + pName + "\nCoach: " + cName + "\nStart Date: " + sDate);
+    jQuery('#card_whatsapp_link').attr('href', 'https://api.whatsapp.com/send?phone=' + cleanPhone + '&text=' + waText);
+
+    spOpenModal('spCardModal');
+}
+
+function openA6CardFromInvoice() {
+    if (latestSubData) {
+        spCloseModal('spInvoiceModal');
+        viewA6Card(latestSubData);
+    }
+}
+
 jQuery('#spSubForm').on('submit', function(e) {
     e.preventDefault();
     var formData = jQuery(this).serialize() + '&action=sportedia_save_subscription&nonce=' + sportedia_vars.nonce;
     jQuery.post(sportedia_vars.ajax_url, formData, function(response) {
         if (response.success) {
             var res = response.data;
+            latestSubData = res;
             spCloseModal('spSubModal');
 
             // Populate Invoice Modal

@@ -1,6 +1,9 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+/**
+ * Utility class for financial calculations in Sportedia.
+ */
 class Sportedia_Finance {
     public const VAT_RATE = 0.05; // 5% VAT in UAE
 
