@@ -302,7 +302,7 @@ textarea.sp-floating-input {
 }
 
 /* Modals */
-.sp-modal {
+.sp-modal, .sp-modal-overlay {
   display: none;
   position: fixed;
   z-index: 9999;
@@ -317,7 +317,7 @@ textarea.sp-floating-input {
   justify-content: center;
 }
 
-.sp-modal.open {
+.sp-modal.open, .sp-modal.active, .sp-modal-overlay.active, .sp-modal-overlay.open {
   display: flex !important;
 }
 
@@ -538,49 +538,62 @@ textarea.sp-floating-input {
   }
 }
 
-/* Printable A5 Invoice & A6 Card CSS Rules */
+/* Printable Invoice, Card & Payroll Report CSS Rules */
 @media print {
   @page {
     size: auto;
     margin: 0mm;
   }
+
   body {
     background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
+
+  /* Hide everything on page by default during print */
   body * {
     visibility: hidden !important;
   }
-  #spPrintableInvoiceModal.open, #spPrintableInvoiceModal.open * {
+
+  /* Show active modal container and all its descendants */
+  #spInvoiceModal.active, #spInvoiceModal.active *,
+  #spInvoiceModal.open, #spInvoiceModal.open *,
+  #spCardModal.active, #spCardModal.active *,
+  #spCardModal.open, #spCardModal.open *,
+  #spPayrollReportModal.active, #spPayrollReportModal.active *,
+  #spPayrollReportModal.open, #spPayrollReportModal.open * {
     visibility: visible !important;
   }
-  #spPrintableInvoiceModal.open {
-    position: fixed !important;
+
+  #spInvoiceModal.active, #spInvoiceModal.open,
+  #spCardModal.active, #spCardModal.open,
+  #spPayrollReportModal.active, #spPayrollReportModal.open {
+    position: absolute !important;
     left: 0 !important;
     top: 0 !important;
-    width: 148mm !important;
-    height: 210mm !important;
-    background: #ffffff !important;
-    box-shadow: none !important;
-    border: none !important;
-    padding: 10mm !important;
-    margin: 0 !important;
-  }
-  #spPrintableCardModal.open, #spPrintableCardModal.open * {
-    visibility: visible !important;
-  }
-  #spPrintableCardModal.open {
-    position: fixed !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 105mm !important;
-    height: 148mm !important;
+    width: 100% !important;
+    height: auto !important;
     background: #ffffff !important;
     box-shadow: none !important;
     border: none !important;
     padding: 0 !important;
     margin: 0 !important;
+    display: block !important;
   }
+
+  .sp-modal-content {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
   .sp-modal-header, .sp-no-print {
     display: none !important;
+    visibility: hidden !important;
   }
 }

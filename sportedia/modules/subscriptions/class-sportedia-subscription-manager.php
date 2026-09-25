@@ -188,13 +188,19 @@ class Sportedia_Subscription_Manager {
             wp_send_json_error('Please fill in all required subscription fields.');
         }
 
-        $invoice_number = 'INV-' . date('Ymd') . '-' . rand(1000, 9999);
-
-        // If coach_id is not manually passed, fetch assigned coach from Program
-        if ($coach_id <= 0 && $program_id > 0) {
-            $prog_row = $wpdb->get_row($wpdb->prepare("SELECT coach_id FROM {$wpdb->prefix}sportedia_programs WHERE id = %d", $program_id));
-            if ($prog_row) $coach_id = intval($prog_row->coach_id);
+        $sessions_count = 12;
+        if ($program_id > 0) {
+            $prog_row = $wpdb->get_row($wpdb->prepare("SELECT sessions_count, coach_id FROM {$wpdb->prefix}sportedia_programs WHERE id = %d", $program_id));
+            if ($prog_row) {
+                if (intval($prog_row->sessions_count) > 0) $sessions_count = intval($prog_row->sessions_count);
+                if ($coach_id <= 0) $coach_id = intval($prog_row->coach_id);
+            }
         }
+        if (isset($_POST['sessions_count']) && intval($_POST['sessions_count']) > 0) {
+            $sessions_count = intval($_POST['sessions_count']);
+        }
+
+        $invoice_number = 'INV-' . date('Ymd') . '-' . rand(1000, 9999);
 
         $coach_user = $coach_id > 0 ? get_userdata($coach_id) : null;
         $coach_name = $coach_user ? $coach_user->display_name : 'Assigned Coach';
@@ -210,6 +216,7 @@ class Sportedia_Subscription_Manager {
             'coach_id'          => $coach_id,
             'plan_name'         => $plan_name,
             'subscription_type' => $sub_type,
+            'sessions_count'    => $sessions_count,
             'start_date'        => $start_date,
             'end_date'          => $end_date,
             'price'             => $price,
@@ -217,7 +224,7 @@ class Sportedia_Subscription_Manager {
             'status'            => $status,
         );
 
-        $format = array('%s', '%d', '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%f', '%s', '%s');
+        $format = array('%s', '%d', '%d', '%d', '%d', '%s', '%s', '%d', '%s', '%s', '%f', '%s', '%s');
 
         if ($sub_id > 0) {
             unset($data['invoice_number']);
@@ -244,6 +251,7 @@ class Sportedia_Subscription_Manager {
             'branch_name'    => $branch_name,
             'coach_name'     => $coach_name,
             'plan_name'      => $plan_name,
+            'sessions_count' => $sessions_count,
             'start_date'     => $start_date,
             'end_date'       => $end_date,
             'base_price'     => Sportedia_Finance::format_price($fin_calc['base']),
@@ -256,7 +264,15 @@ class Sportedia_Subscription_Manager {
         check_ajax_referer('sportedia_nonce', 'nonce');
 
         $current_u = wp_get_current_user();
-        $allowed_roles = array('sportedia_sys_admin', 'sportedia_general_mgr', 'sportedia_facility_mgr', 'administrator');
+        $allowed_roles = array(
+            'sportedia_sys_admin',
+            'sportedia_general_mgr',
+            'sportedia_facility_mgr',
+            'sportedia_ops_mgr',
+            'sportedia_booking_mgr',
+            'sportedia_coach',
+            'administrator'
+        );
         $user_roles = (array) $current_u->roles;
         $has_perm = false;
         foreach ($user_roles as $r) {
@@ -266,10 +282,12 @@ class Sportedia_Subscription_Manager {
             }
         }
         if (!$has_perm) {
-            wp_send_json_error('Access Denied. Session verification is restricted to System Administrators, General Managers, and Facility Managers.');
+            wp_send_json_error('Access Denied. Session verification is restricted to authorized Sportedia staff, managers, and coaches.');
         }
 
-        $barcode = isset($_POST['member_barcode']) ? sanitize_text_field($_POST['member_barcode']) : '';
+        $raw_barcode = isset($_POST['member_barcode']) ? sanitize_text_field($_POST['member_barcode']) : '';
+        $barcode = trim($raw_barcode, " *\t\n\r\0\x0B");
+
         if (empty($barcode)) {
             wp_send_json_error('Please scan or enter a valid Member ID / Barcode.');
         }
@@ -363,6 +381,8 @@ class Sportedia_Subscription_Manager {
             'message'            => 'Member session verified and deducted successfully.',
             'member_name'        => $member->display_name,
             'member_id'          => $emp_id,
+            'subscription_id'    => $sub['id'],
+            'invoice_number'     => !empty($sub['invoice_number']) ? $sub['invoice_number'] : ('SUB-' . $sub['id']),
             'plan_name'          => $sub['plan_name'],
             'sessions_count'     => $total_sessions,
             'sessions_used'      => $new_used,
