@@ -17,6 +17,7 @@ class Sportedia_Attendance_Manager {
         add_action('wp_ajax_sportedia_get_kiosk_qr', array($this, 'ajax_get_kiosk_qr'));
         add_action('wp_ajax_nopriv_sportedia_get_kiosk_qr', array($this, 'ajax_get_kiosk_qr'));
         add_action('wp_ajax_sportedia_process_employee_scan', array($this, 'ajax_process_employee_scan'));
+        add_action('wp_ajax_sportedia_get_payroll_report', array($this, 'ajax_get_payroll_report'));
     }
 
     public static function generate_attendance_qr_token($time = null) {
@@ -54,6 +55,118 @@ class Sportedia_Attendance_Manager {
             'expires_in' => 5,
             'timestamp'  => date('Y-m-d H:i:s')
         ));
+    }
+
+    public static function generate_employee_payroll_report($user_id, $month_year = '') {
+        global $wpdb;
+
+        if (empty($month_year)) {
+            $month_year = date('Y-m');
+        }
+
+        $user = get_userdata($user_id);
+        if (!$user) {
+            return false;
+        }
+
+        $display_name = $user->display_name;
+        $emp_id       = get_user_meta($user_id, 'sportedia_employee_id', true);
+        $base_salary  = floatval(get_user_meta($user_id, 'sportedia_base_salary', true));
+        $pay_type     = get_user_meta($user_id, 'sportedia_pay_type', true);
+        if (empty($pay_type)) $pay_type = 'monthly';
+        $hourly_rate  = floatval(get_user_meta($user_id, 'sportedia_hourly_rate', true));
+
+        $schedule     = get_user_meta($user_id, 'sportedia_work_schedule', true);
+        $work_days    = !empty($schedule['days']) && is_array($schedule['days']) ? $schedule['days'] : array('Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday');
+        $shift_start  = !empty($schedule['start']) ? $schedule['start'] : '09:00';
+        $shift_end    = !empty($schedule['end']) ? $schedule['end'] : '17:00';
+
+        $shift_hours  = max(1, (strtotime('2000-01-01 ' . $shift_end) - strtotime('2000-01-01 ' . $shift_start)) / 3600);
+
+        $year  = intval(substr($month_year, 0, 4));
+        $month = intval(substr($month_year, 5, 2));
+        $days_in_month = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+
+        $scheduled_days = 0;
+        for ($d = 1; $d <= $days_in_month; $d++) {
+            $day_name = date('l', strtotime("$year-$month-$d"));
+            if (in_array($day_name, $work_days, true)) {
+                $scheduled_days++;
+            }
+        }
+
+        $scheduled_hours = $scheduled_days * $shift_hours;
+
+        $summary = self::get_monthly_payroll_attendance_summary($month_year, $user_id, 0);
+
+        $present_days        = $summary['present_days'];
+        $absent_days         = max(0, $scheduled_days - $present_days);
+        $total_lateness_mins = $summary['total_lateness_mins'];
+        $allowed_lateness    = $summary['allowed_lateness'];
+        $excess_lateness     = $summary['excess_lateness'];
+        $actual_working_hrs  = $summary['total_working_hours'];
+
+        $effective_hourly_rate = $hourly_rate > 0 ? $hourly_rate : ($base_salary / max(1, $scheduled_hours));
+
+        $lateness_deduction = round(($excess_lateness / 60) * $effective_hourly_rate, 2);
+        $absence_deduction  = round($absent_days * ($base_salary / max(1, $scheduled_days)), 2);
+        $total_deductions   = $lateness_deduction + $absence_deduction;
+
+        $gross_pay = ($pay_type === 'hourly') ? ($actual_working_hrs * $effective_hourly_rate) : $base_salary;
+        $net_pay   = max(0, round($gross_pay - $total_deductions, 2));
+
+        $deduction_reasons = array();
+        if ($excess_lateness > 0) {
+            $deduction_reasons[] = 'Excess Lateness Deduction (' . $excess_lateness . ' mins over ' . $allowed_lateness . ' mins allowance): ' . Sportedia_Finance::format_price($lateness_deduction);
+        }
+        if ($absent_days > 0) {
+            $deduction_reasons[] = 'Unexcused Absences (' . $absent_days . ' days): ' . Sportedia_Finance::format_price($absence_deduction);
+        }
+        if (empty($deduction_reasons)) {
+            $deduction_reasons[] = 'No deductions applied for ' . $month_year . '.';
+        }
+
+        return array(
+            'user_id'               => $user_id,
+            'employee_name'         => $display_name,
+            'employee_id'           => $emp_id ? $emp_id : 'EMP-' . $user_id,
+            'month_year'            => $month_year,
+            'pay_type'              => $pay_type,
+            'base_salary'           => Sportedia_Finance::format_price($base_salary),
+            'effective_hourly_rate' => Sportedia_Finance::format_price($effective_hourly_rate),
+            'scheduled_days'        => $scheduled_days,
+            'scheduled_hours'       => round($scheduled_hours, 2),
+            'actual_present_days'   => $present_days,
+            'actual_working_hours'  => $actual_working_hrs,
+            'absent_days'           => $absent_days,
+            'total_lateness_mins'   => $total_lateness_mins,
+            'allowed_lateness_mins' => $allowed_lateness,
+            'excess_lateness_mins'  => $excess_lateness,
+            'lateness_deduction'    => Sportedia_Finance::format_price($lateness_deduction),
+            'absence_deduction'     => Sportedia_Finance::format_price($absence_deduction),
+            'total_deductions'      => Sportedia_Finance::format_price($total_deductions),
+            'gross_pay'             => Sportedia_Finance::format_price($gross_pay),
+            'net_payable_amount'    => Sportedia_Finance::format_price($net_pay),
+            'deduction_reasons'     => $deduction_reasons,
+        );
+    }
+
+    public function ajax_get_payroll_report() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        $user_id    = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
+        $month_year = isset($_POST['month_year']) ? sanitize_text_field($_POST['month_year']) : date('Y-m');
+
+        if ($user_id <= 0) {
+            wp_send_json_error('Select a valid employee.');
+        }
+
+        $report = self::generate_employee_payroll_report($user_id, $month_year);
+        if (!$report) {
+            wp_send_json_error('Unable to generate report for selected employee.');
+        }
+
+        wp_send_json_success($report);
     }
 
     public static function get_monthly_payroll_attendance_summary($month_year = '', $user_id = 0, $branch_id = 0) {

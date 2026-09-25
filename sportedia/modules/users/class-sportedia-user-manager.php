@@ -90,6 +90,9 @@ class Sportedia_User_Manager {
                 'medical_notes' => get_user_meta($user_id, 'sportedia_medical_notes', true),
                 'avatar_url'    => get_user_meta($user_id, 'sportedia_avatar', true),
                 'work_schedule' => $schedule,
+                'base_salary'   => get_user_meta($user_id, 'sportedia_base_salary', true),
+                'pay_type'      => get_user_meta($user_id, 'sportedia_pay_type', true),
+                'hourly_rate'   => get_user_meta($user_id, 'sportedia_hourly_rate', true),
                 'role'          => implode(', ', $user_role_names),
                 'role_key'      => !empty($u->roles) ? reset($u->roles) : '',
                 'status'        => $status,
@@ -190,6 +193,11 @@ class Sportedia_User_Manager {
         if (isset($_POST['weight'])) update_user_meta($user_id, 'sportedia_weight', sanitize_text_field($_POST['weight']));
         if (isset($_POST['health_status'])) update_user_meta($user_id, 'sportedia_health_status', sanitize_text_field($_POST['health_status']));
         if (isset($_POST['medical_notes'])) update_user_meta($user_id, 'sportedia_medical_notes', sanitize_textarea_field($_POST['medical_notes']));
+
+        // Salary configuration
+        if (isset($_POST['base_salary'])) update_user_meta($user_id, 'sportedia_base_salary', floatval($_POST['base_salary']));
+        if (isset($_POST['pay_type'])) update_user_meta($user_id, 'sportedia_pay_type', sanitize_text_field($_POST['pay_type']));
+        if (isset($_POST['hourly_rate'])) update_user_meta($user_id, 'sportedia_hourly_rate', floatval($_POST['hourly_rate']));
 
         // Save Work Schedule
         $work_days   = isset($_POST['work_days']) && is_array($_POST['work_days']) ? array_map('sanitize_text_field', $_POST['work_days']) : array('Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday');
