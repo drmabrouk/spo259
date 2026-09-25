@@ -58,9 +58,9 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
     <table class="sp-table">
         <thead>
             <tr>
-                <th>Employee ID</th>
-                <th>Name</th>
-                <th>Email</th>
+                <th>Member / User</th>
+                <th>Contact</th>
+                <th>Health Metrics</th>
                 <th>Role</th>
                 <th>Status</th>
                 <th style="text-align: right;">Actions</th>
@@ -70,9 +70,29 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
             <?php if (!empty($usersList)) : ?>
                 <?php foreach ($usersList as $u) : ?>
                     <tr>
-                        <td><strong><?php echo esc_html($u['employee_id']); ?></strong></td>
-                        <td><?php echo esc_html($u['name']); ?></td>
-                        <td><?php echo esc_html($u['email']); ?></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <?php if (!empty($u['avatar_url'])) : ?>
+                                    <img src="<?php echo esc_url($u['avatar_url']); ?>" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--sp-border-color);">
+                                <?php else : ?>
+                                    <div class="sp-user-avatar" style="width: 36px; height: 36px;"><?php echo esc_html(strtoupper(substr($u['name'], 0, 1))); ?></div>
+                                <?php endif; ?>
+                                <div>
+                                    <strong><?php echo esc_html($u['name']); ?></strong><br>
+                                    <span style="font-size: 11px; color: var(--sp-text-muted);">ID: <?php echo esc_html($u['employee_id']); ?></span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="font-size: 13px; display: block;"><?php echo esc_html($u['email']); ?></span>
+                            <span style="font-size: 11px; color: var(--sp-text-muted);"><?php echo esc_html($u['phone'] ? $u['phone'] : 'No Phone'); ?></span>
+                        </td>
+                        <td>
+                            <span style="font-size: 12px; display: block;">
+                                <?php echo esc_html($u['height'] ? $u['height'] . ' cm' : '-'); ?> | <?php echo esc_html($u['weight'] ? $u['weight'] . ' kg' : '-'); ?>
+                            </span>
+                            <span class="sp-badge" style="font-size: 10px; padding: 2px 6px;"><?php echo esc_html($u['health_status'] ? $u['health_status'] : 'Fit & Healthy'); ?></span>
+                        </td>
                         <td><?php echo esc_html($u['role']); ?></td>
                         <td>
                             <span class="sp-badge <?php echo $u['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
@@ -96,24 +116,67 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
 
 <!-- Modal Dialog for User Create/Edit -->
 <div id="spUserModal" class="sp-modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:2000; align-items:center; justify-content:center;">
-    <div class="sp-card" style="width: 100%; max-width: 540px; margin: 20px;">
+    <div class="sp-card" style="width: 100%; max-width: 580px; margin: 20px; max-height: 90vh; overflow-y: auto;">
         <h3 id="spUserModalTitle" style="margin-top:0;">Add System User</h3>
-        <form id="spUserForm">
+        <form id="spUserForm" enctype="multipart/form-data">
             <input type="hidden" id="sp_user_id" name="user_id" value="0">
 
-            <div class="sp-form-group">
-                <input type="text" id="sp_employee_id" name="employee_id" class="sp-floating-input" placeholder=" " required>
-                <label for="sp_employee_id" class="sp-floating-label">Employee ID</label>
+            <div style="display: flex; gap: 12px;">
+                <div class="sp-form-group" style="flex: 1;">
+                    <input type="text" id="sp_employee_id" name="employee_id" class="sp-floating-input" placeholder=" " required>
+                    <label for="sp_employee_id" class="sp-floating-label">Member / Employee ID</label>
+                </div>
+
+                <div class="sp-form-group" style="flex: 1;">
+                    <input type="text" id="sp_phone" name="phone" class="sp-floating-input" placeholder=" ">
+                    <label for="sp_phone" class="sp-floating-label">Mobile Phone Number</label>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px;">
+                <div class="sp-form-group" style="flex: 1;">
+                    <input type="text" id="sp_display_name" name="display_name" class="sp-floating-input" placeholder=" " required>
+                    <label for="sp_display_name" class="sp-floating-label">Full Name *</label>
+                </div>
+
+                <div class="sp-form-group" style="flex: 1;">
+                    <input type="email" id="sp_email" name="email" class="sp-floating-input" placeholder=" " required>
+                    <label for="sp_email" class="sp-floating-label">Email Address *</label>
+                </div>
+            </div>
+
+            <!-- Profile Photo Upload -->
+            <div style="margin-bottom: 20px; border: 1px dashed var(--sp-border-color); padding: 12px; border-radius: var(--sp-radius);">
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px;">Profile Photo (Max size: 2 MB)</label>
+                <input type="file" id="sp_avatar_file" name="avatar_file" accept="image/*" style="font-size: 12px;">
+            </div>
+
+            <!-- Health Metrics -->
+            <div style="display: flex; gap: 12px;">
+                <div class="sp-form-group" style="flex: 1;">
+                    <input type="text" id="sp_height" name="height" class="sp-floating-input" placeholder=" ">
+                    <label for="sp_height" class="sp-floating-label">Height (cm)</label>
+                </div>
+
+                <div class="sp-form-group" style="flex: 1;">
+                    <input type="text" id="sp_weight" name="weight" class="sp-floating-input" placeholder=" ">
+                    <label for="sp_weight" class="sp-floating-label">Weight (kg)</label>
+                </div>
+
+                <div class="sp-form-group" style="flex: 1;">
+                    <select id="sp_health_status" name="health_status" class="sp-floating-select">
+                        <option value="Fit & Healthy">Fit & Healthy</option>
+                        <option value="Good">Good</option>
+                        <option value="Under Observation">Under Observation</option>
+                        <option value="Medical Exception">Medical Exception</option>
+                    </select>
+                    <label for="sp_health_status" class="sp-floating-label">Health Status</label>
+                </div>
             </div>
 
             <div class="sp-form-group">
-                <input type="text" id="sp_display_name" name="display_name" class="sp-floating-input" placeholder=" " required>
-                <label for="sp_display_name" class="sp-floating-label">Full Name</label>
-            </div>
-
-            <div class="sp-form-group">
-                <input type="email" id="sp_email" name="email" class="sp-floating-input" placeholder=" " required>
-                <label for="sp_email" class="sp-floating-label">Email Address</label>
+                <textarea id="sp_medical_notes" name="medical_notes" class="sp-floating-input" style="height: 60px;" placeholder=" "></textarea>
+                <label for="sp_medical_notes" class="sp-floating-label">Health Problems / Medical Notes</label>
             </div>
 
             <div class="sp-form-group">
@@ -175,8 +238,13 @@ function editUser(u) {
     jQuery('#spUserModalTitle').text('Edit System User');
     jQuery('#sp_user_id').val(u.id);
     jQuery('#sp_employee_id').val(u.employee_id);
+    jQuery('#sp_phone').val(u.phone || '');
     jQuery('#sp_display_name').val(u.name);
     jQuery('#sp_email').val(u.email);
+    jQuery('#sp_height').val(u.height || '');
+    jQuery('#sp_weight').val(u.weight || '');
+    jQuery('#sp_health_status').val(u.health_status || 'Fit & Healthy');
+    jQuery('#sp_medical_notes').val(u.medical_notes || '');
     jQuery('#sp_role').val(u.role_key);
     jQuery('#sp_status').val(u.status);
     jQuery('#sp_password').val('');
@@ -209,12 +277,22 @@ function deleteUser(userId) {
 
 jQuery('#spUserForm').on('submit', function(e) {
     e.preventDefault();
-    var formData = jQuery(this).serialize() + '&action=sportedia_save_user&nonce=' + sportedia_vars.nonce;
-    jQuery.post(sportedia_vars.ajax_url, formData, function(response) {
-        if (response.success) {
-            location.reload();
-        } else {
-            alert(response.data || 'Error saving user.');
+    var formData = new FormData(this);
+    formData.append('action', 'sportedia_save_user');
+    formData.append('nonce', sportedia_vars.nonce);
+
+    jQuery.ajax({
+        url: sportedia_vars.ajax_url,
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function(response) {
+            if (response.success) {
+                location.reload();
+            } else {
+                alert(response.data || 'Error saving user.');
+            }
         }
     });
 });

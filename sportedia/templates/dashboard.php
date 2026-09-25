@@ -3,7 +3,30 @@ if (!defined('ABSPATH')) exit;
 
 $stats = Sportedia_Dashboard::get_stats_for_user();
 $current_user = wp_get_current_user();
+
+$user_id = get_current_user_id();
+$user_subs = Sportedia_Subscription_Manager::get_subscriptions('', 0, '');
+$has_expired = false;
+$has_active  = false;
+foreach ($user_subs as $ms) {
+    if (intval($ms['user_id']) === $user_id) {
+        if ($ms['status'] === 'expired') $has_expired = true;
+        if ($ms['status'] === 'active') $has_active = true;
+    }
+}
 ?>
+
+<?php if ($has_expired && !$has_active) : ?>
+    <div class="sp-card" style="background-color: #fef2f2; border-color: #fecaca; padding: 16px 20px; margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; gap: 12px; color: #991b1b;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div>
+                <strong style="font-size: 16px; display: block;">Subscription Expired</strong>
+                <span style="font-size: 13px;">Your membership subscription has expired. Please contact reception or your facility administrator to renew your membership.</span>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
 
 <div class="sp-page-header">
     <h1 class="sp-page-title">Dashboard Overview</h1>

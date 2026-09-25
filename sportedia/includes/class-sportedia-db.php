@@ -39,6 +39,7 @@ class Sportedia_DB {
         $table_subscriptions = $wpdb->prefix . 'sportedia_subscriptions';
         $sql_subscriptions = "CREATE TABLE $table_subscriptions (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            invoice_number varchar(100) DEFAULT '' NOT NULL,
             user_id bigint(20) UNSIGNED NOT NULL,
             branch_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
             program_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
@@ -47,6 +48,7 @@ class Sportedia_DB {
             start_date date NOT NULL,
             end_date date NOT NULL,
             price decimal(10,2) DEFAULT '0.00' NOT NULL,
+            notes text DEFAULT '',
             status varchar(20) DEFAULT 'active' NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
             PRIMARY KEY  (id),
@@ -64,6 +66,8 @@ class Sportedia_DB {
             category varchar(100) DEFAULT '' NOT NULL,
             schedule varchar(255) DEFAULT '' NOT NULL,
             capacity int(11) DEFAULT 20 NOT NULL,
+            sessions_count int(11) DEFAULT 12 NOT NULL,
+            duration_days int(11) DEFAULT 30 NOT NULL,
             status varchar(20) DEFAULT 'active' NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
             PRIMARY KEY  (id),
