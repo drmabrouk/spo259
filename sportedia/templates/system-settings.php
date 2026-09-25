@@ -15,6 +15,8 @@ $grace_days         = Sportedia_Settings_Manager::get_setting('subscription_grac
 $enable_renewal     = Sportedia_Settings_Manager::get_setting('enable_renewal_reminders', 'yes');
 $default_att_status = Sportedia_Settings_Manager::get_setting('default_attendance_status', 'present');
 $allow_past_att     = Sportedia_Settings_Manager::get_setting('allow_past_attendance', 'yes');
+$lateness_allowance = Sportedia_Settings_Manager::get_setting('monthly_lateness_allowance', '30');
+$checkout_threshold = Sportedia_Settings_Manager::get_setting('checkout_threshold_minutes', '30');
 $report_email       = Sportedia_Settings_Manager::get_setting('report_summary_email', 'reports@sportedia.online');
 $export_format      = Sportedia_Settings_Manager::get_setting('default_export_format', 'csv');
 
@@ -109,6 +111,16 @@ $tabs = array(
         <?php elseif ($active_tab === 'attendance') : ?>
             <h3 style="margin-top:0;">Attendance Tracking Policy</h3>
             <div class="sp-form-group">
+                <input type="number" id="setting_lateness_allowance" name="settings[monthly_lateness_allowance]" class="sp-floating-input" value="<?php echo esc_attr($lateness_allowance); ?>">
+                <label for="setting_lateness_allowance" class="sp-floating-label">Monthly Allowed Lateness (Minutes)</label>
+            </div>
+
+            <div class="sp-form-group">
+                <input type="number" id="setting_checkout_threshold" name="settings[checkout_threshold_minutes]" class="sp-floating-input" value="<?php echo esc_attr($checkout_threshold); ?>">
+                <label for="setting_checkout_threshold" class="sp-floating-label">Check-out Re-scan Threshold (Minutes)</label>
+            </div>
+
+            <div class="sp-form-group">
                 <select id="setting_default_att_status" name="settings[default_attendance_status]" class="sp-floating-select">
                     <option value="present" <?php selected($default_att_status, 'present'); ?>>Present</option>
                     <option value="late" <?php selected($default_att_status, 'late'); ?>>Late</option>
@@ -116,6 +128,7 @@ $tabs = array(
                 </select>
                 <label for="setting_default_att_status" class="sp-floating-label">Default Check-in Status</label>
             </div>
+
             <div class="sp-form-group">
                 <select id="setting_allow_past_att" name="settings[allow_past_attendance]" class="sp-floating-select">
                     <option value="yes" <?php selected($allow_past_att, 'yes'); ?>>Allowed</option>

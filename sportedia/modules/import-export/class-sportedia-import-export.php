@@ -42,6 +42,26 @@ class Sportedia_Import_Export {
             foreach ($subs as $s) {
                 fputcsv($output, array($s['id'], $s['member_name'], $s['employee_id'], $s['plan_name'], $s['subscription_type'], $s['start_date'], $s['end_date'], $s['price'], $s['status']));
             }
+        } else if ($type === 'attendance') {
+            fputcsv($output, array('Record ID', 'Employee ID', 'Employee Name', 'Role', 'Branch', 'Date', 'Scheduled Start', 'Check-In Time', 'Scheduled End', 'Check-Out Time', 'Lateness (Mins)', 'Working Duration (Mins)', 'Status'));
+            $att = Sportedia_Attendance_Manager::get_attendance('', 0, 0);
+            foreach ($att as $a) {
+                fputcsv($output, array(
+                    $a['id'],
+                    $a['employee_id'],
+                    $a['user_name'],
+                    $a['role_label'],
+                    $a['branch_name'],
+                    $a['attendance_date'],
+                    $a['scheduled_start'],
+                    $a['check_in_time'],
+                    $a['scheduled_end'],
+                    $a['check_out_time'],
+                    $a['lateness_minutes'],
+                    $a['working_duration_minutes'],
+                    $a['status']
+                ));
+            }
         } else {
             fputcsv($output, array('User ID', 'Employee ID', 'Name', 'Email', 'Role', 'Status'));
             $users = Sportedia_User_Manager::get_users();
