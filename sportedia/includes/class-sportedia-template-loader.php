@@ -5,44 +5,78 @@ class Sportedia_Template_Loader {
 
     public function __construct() {
         add_filter('template_include', array($this, 'load_sportedia_template'), 99);
+        add_shortcode('sportedia_app', array($this, 'shortcode_app'));
+        add_shortcode('sportedia_kiosk', array($this, 'shortcode_kiosk'));
+    }
+
+    public static function is_dashboard_page() {
+        global $post;
+        $page_id = get_option('sportedia_page_id');
+        if (is_page($page_id) || is_page('sportedia')) {
+            return true;
+        }
+        if ($post && (has_shortcode($post->post_content, 'sportedia_app') || strpos($post->post_content, '<!-- sportedia_app -->') !== false)) {
+            return true;
+        }
+        return false;
+    }
+
+    public static function is_kiosk_page() {
+        global $post;
+        $kiosk_id  = get_option('sportedia_kiosk_page_id');
+        $verify_id = get_option('sportedia_verify_page_id');
+        $scan_id   = get_option('sportedia_scan_page_id');
+
+        if (is_page($kiosk_id) || is_page($verify_id) || is_page($scan_id) || is_page('sportedia-kiosk') || is_page('sportedia-verify') || is_page('sportedia-scan')) {
+            return true;
+        }
+        if ($post && (has_shortcode($post->post_content, 'sportedia_kiosk') || strpos($post->post_content, '<!-- sportedia_kiosk -->') !== false || strpos($post->post_content, '<!-- sportedia_verify -->') !== false)) {
+            return true;
+        }
+        return false;
     }
 
     public static function is_sportedia_page() {
-        $sportedia_page_id = get_option('sportedia_page_id');
-        return is_page($sportedia_page_id) || is_page('sportedia');
-    }
-
-    public static function is_scan_page() {
-        $scan_page_id = get_option('sportedia_scan_page_id');
-        return is_page($scan_page_id) || is_page('sportedia-scan');
-    }
-
-    public static function is_verify_page() {
-        $verify_page_id = get_option('sportedia_verify_page_id');
-        return is_page($verify_page_id) || is_page('sportedia-verify');
+        return self::is_dashboard_page() || self::is_kiosk_page();
     }
 
     public function load_sportedia_template($template) {
-        if (self::is_verify_page()) {
+        if (self::is_kiosk_page()) {
             if (!is_user_logged_in()) {
                 return SPORTEDIA_PLUGIN_DIR . 'templates/login-form.php';
             }
             return SPORTEDIA_PLUGIN_DIR . 'templates/verification-system.php';
         }
 
-        if (self::is_scan_page()) {
-            if (!is_user_logged_in()) {
-                return SPORTEDIA_PLUGIN_DIR . 'templates/login-form.php';
-            }
-            return SPORTEDIA_PLUGIN_DIR . 'templates/kiosk-attendance.php';
-        }
-
-        if (self::is_sportedia_page()) {
+        if (self::is_dashboard_page()) {
             if (!is_user_logged_in()) {
                 return SPORTEDIA_PLUGIN_DIR . 'templates/login-form.php';
             }
             return SPORTEDIA_PLUGIN_DIR . 'templates/app-layout.php';
         }
+
         return $template;
+    }
+
+    public function shortcode_app() {
+        if (!is_user_logged_in()) {
+            ob_start();
+            include SPORTEDIA_PLUGIN_DIR . 'templates/login-form.php';
+            return ob_get_clean();
+        }
+        ob_start();
+        include SPORTEDIA_PLUGIN_DIR . 'templates/app-layout.php';
+        return ob_get_clean();
+    }
+
+    public function shortcode_kiosk() {
+        if (!is_user_logged_in()) {
+            ob_start();
+            include SPORTEDIA_PLUGIN_DIR . 'templates/login-form.php';
+            return ob_get_clean();
+        }
+        ob_start();
+        include SPORTEDIA_PLUGIN_DIR . 'templates/verification-system.php';
+        return ob_get_clean();
     }
 }
