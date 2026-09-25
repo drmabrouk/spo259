@@ -35,6 +35,7 @@ require_once SPORTEDIA_PLUGIN_DIR . 'modules/branches/class-sportedia-branch-man
 require_once SPORTEDIA_PLUGIN_DIR . 'modules/subscriptions/class-sportedia-subscription-manager.php';
 require_once SPORTEDIA_PLUGIN_DIR . 'modules/programs/class-sportedia-program-manager.php';
 require_once SPORTEDIA_PLUGIN_DIR . 'modules/attendance/class-sportedia-attendance-manager.php';
+require_once SPORTEDIA_PLUGIN_DIR . 'modules/coaches/class-sportedia-coach-manager.php';
 require_once SPORTEDIA_PLUGIN_DIR . 'modules/reports/class-sportedia-reports-manager.php';
 require_once SPORTEDIA_PLUGIN_DIR . 'modules/settings/class-sportedia-settings-manager.php';
 require_once SPORTEDIA_PLUGIN_DIR . 'modules/import-export/class-sportedia-import-export.php';
@@ -77,6 +78,7 @@ final class Sportedia {
         Sportedia_Subscription_Manager::instance();
         Sportedia_Program_Manager::instance();
         Sportedia_Attendance_Manager::instance();
+        Sportedia_Coach_Manager::instance();
         Sportedia_Reports_Manager::instance();
         Sportedia_Settings_Manager::instance();
         Sportedia_Import_Export::instance();

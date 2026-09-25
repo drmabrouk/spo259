@@ -81,6 +81,55 @@ foreach ($user_subs as $ms) {
     <?php endif; ?>
 </div>
 
+<?php
+$my_member_subs = array_filter($user_subs, function($s) use ($user_id) {
+    return intval($s['user_id']) === $user_id;
+});
+?>
+
+<?php if (!empty($my_member_subs)) : ?>
+    <div class="sp-card">
+        <h3 style="margin-top: 0; font-size: 18px; font-weight: 700;">My Active Programs, Memberships & Invoices</h3>
+        <div class="sp-table-wrapper" style="margin-top: 16px;">
+            <table class="sp-table">
+                <thead>
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Program / Plan Name</th>
+                        <th>Coach & Branch</th>
+                        <th>Dates</th>
+                        <th>Sessions</th>
+                        <th>Amount (AED)</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($my_member_subs as $ms) : ?>
+                        <tr>
+                            <td><code>#<?php echo esc_html($ms['invoice_number'] ? $ms['invoice_number'] : 'INV-OLD'); ?></code></td>
+                            <td><strong><?php echo esc_html($ms['plan_name']); ?></strong></td>
+                            <td>
+                                <div><?php echo esc_html($ms['coach_name']); ?></div>
+                                <span style="font-size: 11px; color: var(--sp-text-muted);"><?php echo esc_html($ms['branch_name']); ?></span>
+                            </td>
+                            <td><?php echo esc_html($ms['start_date'] . ' to ' . $ms['end_date']); ?></td>
+                            <td>
+                                <span class="sp-badge"><?php echo esc_html(intval($ms['sessions_used'])); ?> / <?php echo esc_html(intval($ms['sessions_count'])); ?></span>
+                            </td>
+                            <td><?php echo esc_html(Sportedia_Finance::format_price($ms['price'])); ?></td>
+                            <td>
+                                <span class="sp-badge <?php echo $ms['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                                    <?php echo esc_html(ucfirst($ms['status'])); ?>
+                                </span>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+<?php endif; ?>
+
 <div class="sp-card">
     <h3 style="margin-top: 0; font-size: 18px; font-weight: 700;">System Status & Information</h3>
     <p style="color: var(--sp-text-muted); font-size: 14px;">
