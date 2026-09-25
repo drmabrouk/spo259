@@ -20,15 +20,10 @@ class Sportedia_User_Manager {
         global $wpdb;
 
         $args = array(
-            'number' => 100,
+            'number'  => 150,
             'orderby' => 'registered',
-            'order' => 'DESC'
+            'order'   => 'DESC'
         );
-
-        if (!empty($search)) {
-            $args['search'] = '*' . esc_attr($search) . '*';
-            $args['search_columns'] = array('user_login', 'user_email', 'display_name');
-        }
 
         if (!empty($role)) {
             $args['role'] = $role;
@@ -46,6 +41,19 @@ class Sportedia_User_Manager {
                 $emp_id = 'EMP-' . str_pad($user_id, 4, '0', STR_PAD_LEFT);
             }
 
+            // Search filtering across Name, Email, Username, and Employee ID
+            if (!empty($search)) {
+                $s = strtolower(trim($search));
+                $match = (stripos(strtolower($u->display_name), $s) !== false) ||
+                         (stripos(strtolower($u->user_email), $s) !== false) ||
+                         (stripos(strtolower($u->user_login), $s) !== false) ||
+                         (stripos(strtolower($emp_id), $s) !== false);
+
+                if (!$match) {
+                    continue;
+                }
+            }
+
             // Get Status
             $status = get_user_meta($user_id, 'sportedia_status', true);
             if (empty($status)) $status = 'active';
@@ -54,7 +62,7 @@ class Sportedia_User_Manager {
             $assigned_branches = self::get_user_branches($user_id);
 
             // Filter by branch if specified
-            if ($branch_id > 0 && !in_array($branch_id, $assigned_branches)) {
+            if ($branch_id > 0 && !in_array($branch_id, $assigned_branches, true)) {
                 continue;
             }
 
