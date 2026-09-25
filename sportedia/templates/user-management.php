@@ -9,7 +9,7 @@ $usersList = Sportedia_User_Manager::get_users($search, $role_filter, $branch_fi
 $branchesList = Sportedia_Branch_Manager::get_branches();
 ?>
 
-<div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+<div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
     <div>
         <h1 class="sp-page-title">System User Management</h1>
         <p class="sp-page-subtitle">Manage system users, roles, employee IDs, and multi-branch access.</p>
@@ -20,7 +20,7 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
     </button>
 </div>
 
-<div class="sp-card" style="padding: 16px;">
+<div class="sp-card" style="padding: 16px; margin-bottom: 20px;">
     <form method="get" action="" style="display: flex; gap: 12px; flex-wrap: wrap;">
         <input type="hidden" name="module" value="users">
 
@@ -50,96 +50,107 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
             </select>
         </div>
 
-        <button type="submit" class="sp-btn sp-btn-secondary">Filter</button>
+        <button type="submit" class="sp-btn sp-btn-primary">Filter</button>
     </form>
 </div>
 
-<div class="sp-table-wrapper">
-    <table class="sp-table">
-        <thead>
-            <tr>
-                <th>Member / User</th>
-                <th>Contact</th>
-                <th>Health Metrics</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th style="text-align: right;">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if (!empty($usersList)) : ?>
-                <?php foreach ($usersList as $u) : ?>
-                    <tr>
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <?php if (!empty($u['avatar_url'])) : ?>
-                                    <img src="<?php echo esc_url($u['avatar_url']); ?>" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--sp-border-color);">
-                                <?php else : ?>
-                                    <div class="sp-user-avatar" style="width: 36px; height: 36px;"><?php echo esc_html(strtoupper(substr($u['name'], 0, 1))); ?></div>
-                                <?php endif; ?>
-                                <div>
-                                    <strong><?php echo esc_html($u['name']); ?></strong><br>
-                                    <span style="font-size: 11px; color: var(--sp-text-muted);">ID: <?php echo esc_html($u['employee_id']); ?></span>
-                                </div>
+<!-- Modern Cards Display (Sorted Newest to Oldest) -->
+<?php if (!empty($usersList)) : ?>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+        <?php foreach ($usersList as $u) : ?>
+            <div class="sp-card" style="margin-bottom: 0; padding: 18px; border-radius: var(--sp-radius); display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <!-- Header with Avatar -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <?php if (!empty($u['avatar_url'])) : ?>
+                                <img src="<?php echo esc_url($u['avatar_url']); ?>" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--sp-border-color);">
+                            <?php else : ?>
+                                <div class="sp-user-avatar" style="width: 40px; height: 40px; font-size: 15px; font-weight: 700;"><?php echo esc_html(strtoupper(substr($u['name'], 0, 1))); ?></div>
+                            <?php endif; ?>
+                            <div>
+                                <strong style="font-size: 15px; color: var(--sp-text-main); display: block;"><?php echo esc_html($u['name']); ?></strong>
+                                <span style="font-size: 11px; color: var(--sp-text-muted); font-family: monospace;">ID: <?php echo esc_html($u['employee_id']); ?></span>
                             </div>
-                        </td>
-                        <td>
-                            <span style="font-size: 13px; display: block;"><?php echo esc_html($u['email']); ?></span>
-                            <span style="font-size: 11px; color: var(--sp-text-muted);"><?php echo esc_html($u['phone'] ? $u['phone'] : 'No Phone'); ?></span>
-                        </td>
-                        <td>
-                            <span style="font-size: 12px; display: block;">
-                                <?php echo esc_html($u['height'] ? $u['height'] . ' cm' : '-'); ?> | <?php echo esc_html($u['weight'] ? $u['weight'] . ' kg' : '-'); ?>
+                        </div>
+
+                        <span class="sp-badge <?php echo $u['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                            <?php echo esc_html(ucfirst($u['status'])); ?>
+                        </span>
+                    </div>
+
+                    <!-- Details Box -->
+                    <div style="background: #f8f9fa; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 12px; font-size: 12px; margin-bottom: 14px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                            <div>
+                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">ROLE</span>
+                                <strong><?php echo esc_html($u['role']); ?></strong>
+                            </div>
+                            <div>
+                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">MOBILE</span>
+                                <span><?php echo esc_html($u['phone'] ? $u['phone'] : 'N/A'); ?></span>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 8px;">
+                            <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">EMAIL ADDRESS</span>
+                            <span style="word-break: break-all;"><?php echo esc_html($u['email']); ?></span>
+                        </div>
+
+                        <div style="border-top: 1px dashed var(--sp-border-color); padding-top: 6px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 10px; color: var(--sp-text-muted);">HEALTH METRICS</span>
+                            <span style="font-weight: 600; font-size: 11px;">
+                                <?php echo esc_html($u['height'] ? $u['height'] . 'cm' : '-'); ?> / <?php echo esc_html($u['weight'] ? $u['weight'] . 'kg' : '-'); ?>
+                                (<?php echo esc_html($u['health_status'] ? $u['health_status'] : 'Fit'); ?>)
                             </span>
-                            <span class="sp-badge" style="font-size: 10px; padding: 2px 6px;"><?php echo esc_html($u['health_status'] ? $u['health_status'] : 'Fit & Healthy'); ?></span>
-                        </td>
-                        <td><?php echo esc_html($u['role']); ?></td>
-                        <td>
-                            <span class="sp-badge <?php echo $u['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
-                                <?php echo esc_html(ucfirst($u['status'])); ?>
-                            </span>
-                        </td>
-                        <td style="text-align: right;">
-                            <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editUser(<?php echo json_encode($u); ?>)'>Edit</button>
-                            <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteUser(<?php echo $u['id']; ?>)">Delete</button>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php else : ?>
-                <tr>
-                    <td colspan="6" style="text-align: center; color: var(--sp-text-muted); padding: 32px;">No system users found.</td>
-                </tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--sp-border-color); padding-top: 10px; margin-top: auto;">
+                    <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editUser(<?php echo json_encode($u); ?>)'>Edit Profile</button>
+                    <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteUser(<?php echo $u['id']; ?>)">Delete</button>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+<?php else : ?>
+    <div class="sp-card" style="text-align: center; color: var(--sp-text-muted); padding: 48px;">
+        <h3>No system users found</h3>
+        <p>No users match your query parameters.</p>
+    </div>
+<?php endif; ?>
 
 <!-- Modal Dialog for User Create/Edit -->
-<div id="spUserModal" class="sp-modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:2000; align-items:center; justify-content:center;">
-    <div class="sp-card" style="width: 100%; max-width: 580px; margin: 20px; max-height: 90vh; overflow-y: auto;">
-        <h3 id="spUserModalTitle" style="margin-top:0;">Add System User</h3>
+<div id="spUserModal" class="sp-modal">
+    <div class="sp-modal-content" style="max-width: 600px;">
+        <div class="sp-modal-header">
+            <h3 id="spUserModalTitle" class="sp-modal-title">Add System User</h3>
+            <button type="button" class="sp-modal-close" onclick="spCloseModal('spUserModal')">&times;</button>
+        </div>
+
         <form id="spUserForm" enctype="multipart/form-data">
             <input type="hidden" id="sp_user_id" name="user_id" value="0">
 
-            <div style="display: flex; gap: 12px;">
-                <div class="sp-form-group" style="flex: 1;">
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
                     <input type="text" id="sp_employee_id" name="employee_id" class="sp-floating-input" placeholder=" " required>
-                    <label for="sp_employee_id" class="sp-floating-label">Member / Employee ID</label>
+                    <label for="sp_employee_id" class="sp-floating-label">Member / Employee ID *</label>
                 </div>
 
-                <div class="sp-form-group" style="flex: 1;">
+                <div class="sp-form-group">
                     <input type="text" id="sp_phone" name="phone" class="sp-floating-input" placeholder=" ">
                     <label for="sp_phone" class="sp-floating-label">Mobile Phone Number</label>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 12px;">
-                <div class="sp-form-group" style="flex: 1;">
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
                     <input type="text" id="sp_display_name" name="display_name" class="sp-floating-input" placeholder=" " required>
                     <label for="sp_display_name" class="sp-floating-label">Full Name *</label>
                 </div>
 
-                <div class="sp-form-group" style="flex: 1;">
+                <div class="sp-form-group">
                     <input type="email" id="sp_email" name="email" class="sp-floating-input" placeholder=" " required>
                     <label for="sp_email" class="sp-floating-label">Email Address *</label>
                 </div>
@@ -152,18 +163,18 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
             </div>
 
             <!-- Health Metrics -->
-            <div style="display: flex; gap: 12px;">
-                <div class="sp-form-group" style="flex: 1;">
+            <div class="sp-grid-3">
+                <div class="sp-form-group">
                     <input type="text" id="sp_height" name="height" class="sp-floating-input" placeholder=" ">
                     <label for="sp_height" class="sp-floating-label">Height (cm)</label>
                 </div>
 
-                <div class="sp-form-group" style="flex: 1;">
+                <div class="sp-form-group">
                     <input type="text" id="sp_weight" name="weight" class="sp-floating-input" placeholder=" ">
                     <label for="sp_weight" class="sp-floating-label">Weight (kg)</label>
                 </div>
 
-                <div class="sp-form-group" style="flex: 1;">
+                <div class="sp-form-group">
                     <select id="sp_health_status" name="health_status" class="sp-floating-select">
                         <option value="Fit & Healthy">Fit & Healthy</option>
                         <option value="Good">Good</option>
@@ -182,19 +193,19 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
             <!-- Employee Salary & Payroll Configuration -->
             <div style="margin-bottom: 20px; border: 1px solid var(--sp-border-color); padding: 12px; border-radius: var(--sp-radius);">
                 <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 8px;">Employee Salary & Payroll Configuration</label>
-                <div style="display: flex; gap: 12px;">
-                    <div style="flex: 1;">
+                <div class="sp-grid-3">
+                    <div>
                         <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">Base Salary (AED)</label>
                         <input type="number" step="0.01" id="sp_base_salary" name="base_salary" class="sp-floating-input" value="0.00">
                     </div>
-                    <div style="flex: 1;">
+                    <div>
                         <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">Pay Type</label>
                         <select id="sp_pay_type" name="pay_type" class="sp-floating-select">
                             <option value="monthly">Monthly Fixed</option>
                             <option value="hourly">Hourly Rate</option>
                         </select>
                     </div>
-                    <div style="flex: 1;">
+                    <div>
                         <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">Hourly Rate (AED)</label>
                         <input type="number" step="0.01" id="sp_hourly_rate" name="hourly_rate" class="sp-floating-input" value="0.00">
                     </div>
@@ -216,37 +227,39 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
                     <?php endforeach; ?>
                 </div>
 
-                <div style="display: flex; gap: 12px;">
-                    <div style="flex: 1;">
+                <div class="sp-grid-2">
+                    <div>
                         <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">Shift Start Time</label>
                         <input type="time" id="sp_shift_start" name="shift_start" class="sp-floating-input" value="09:00">
                     </div>
-                    <div style="flex: 1;">
+                    <div>
                         <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">Shift End Time</label>
                         <input type="time" id="sp_shift_end" name="shift_end" class="sp-floating-input" value="17:00">
                     </div>
                 </div>
             </div>
 
-            <div class="sp-form-group">
-                <select id="sp_role" name="role" class="sp-floating-select" required>
-                    <option value="sportedia_sys_admin">System Administrator</option>
-                    <option value="sportedia_facility_mgr">Facility Manager</option>
-                    <option value="sportedia_ops_mgr">Operations Manager</option>
-                    <option value="sportedia_booking_mgr">Booking & Reception Manager</option>
-                    <option value="sportedia_coach">Coach / Trainer</option>
-                    <option value="sportedia_customer">Customer / Member</option>
-                    <option value="sportedia_finance_mgr">Finance & Accounts Manager</option>
-                </select>
-                <label for="sp_role" class="sp-floating-label">User Role</label>
-            </div>
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
+                    <select id="sp_role" name="role" class="sp-floating-select" required>
+                        <option value="sportedia_sys_admin">System Administrator</option>
+                        <option value="sportedia_facility_mgr">Facility Manager</option>
+                        <option value="sportedia_ops_mgr">Operations Manager</option>
+                        <option value="sportedia_booking_mgr">Booking & Reception Manager</option>
+                        <option value="sportedia_coach">Coach / Trainer</option>
+                        <option value="sportedia_customer">Customer / Member</option>
+                        <option value="sportedia_finance_mgr">Finance & Accounts Manager</option>
+                    </select>
+                    <label for="sp_role" class="sp-floating-label">User Role</label>
+                </div>
 
-            <div class="sp-form-group">
-                <select id="sp_status" name="status" class="sp-floating-select">
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                </select>
-                <label for="sp_status" class="sp-floating-label">Account Status</label>
+                <div class="sp-form-group">
+                    <select id="sp_status" name="status" class="sp-floating-select">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                    <label for="sp_status" class="sp-floating-label">Account Status</label>
+                </div>
             </div>
 
             <div class="sp-form-group">
@@ -266,7 +279,7 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+            <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--sp-border-color); padding-top: 16px;">
                 <button type="button" class="sp-btn sp-btn-secondary" onclick="spCloseModal('spUserModal')">Cancel</button>
                 <button type="submit" class="sp-btn sp-btn-primary">Save User</button>
             </div>

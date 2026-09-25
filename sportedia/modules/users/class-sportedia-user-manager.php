@@ -15,6 +15,7 @@ class Sportedia_User_Manager {
         add_action('wp_ajax_sportedia_save_user', array($this, 'ajax_save_user'));
         add_action('wp_ajax_sportedia_delete_user', array($this, 'ajax_delete_user'));
         add_action('wp_ajax_sportedia_upload_avatar', array($this, 'ajax_upload_avatar'));
+        add_action('wp_ajax_sportedia_update_my_profile', array($this, 'ajax_update_my_profile'));
     }
 
     public static function get_users($search = '', $role = '', $branch_id = 0) {
@@ -228,6 +229,64 @@ class Sportedia_User_Manager {
         self::set_user_branches($user_id, $branch_ids);
 
         wp_send_json_success('User saved successfully.');
+    }
+
+    public function ajax_update_my_profile() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error('Not logged in.');
+        }
+
+        $user_id     = get_current_user_id();
+        $name        = sanitize_text_field($_POST['display_name']);
+        $email       = sanitize_email($_POST['email']);
+        $password    = isset($_POST['password']) ? $_POST['password'] : '';
+        $nationality = sanitize_text_field($_POST['nationality']);
+        $gender      = sanitize_text_field($_POST['gender']);
+        $address     = sanitize_textarea_field($_POST['address']);
+        $emirate     = sanitize_text_field($_POST['emirate']);
+
+        if (empty($name) || empty($email)) {
+            wp_send_json_error('Name and email are required.');
+        }
+
+        $user_data = array(
+            'ID'           => $user_id,
+            'display_name' => $name,
+            'user_email'   => $email
+        );
+
+        if (!empty($password)) {
+            $user_data['user_pass'] = $password;
+        }
+
+        $updated = wp_update_user($user_data);
+        if (is_wp_error($updated)) {
+            wp_send_json_error($updated->get_error_message());
+        }
+
+        update_user_meta($user_id, 'sportedia_nationality', $nationality);
+        update_user_meta($user_id, 'sportedia_gender', $gender);
+        update_user_meta($user_id, 'sportedia_address', $address);
+        update_user_meta($user_id, 'sportedia_emirate', $emirate);
+        update_user_meta($user_id, 'sportedia_country', 'United Arab Emirates');
+
+        if (!empty($_FILES['avatar_file']['tmp_name'])) {
+            if ($_FILES['avatar_file']['size'] > 2 * 1024 * 1024) {
+                wp_send_json_error('Profile photo exceeds 2 MB size limit.');
+            }
+            require_once(ABSPATH . 'wp-admin/includes/file.php');
+            require_once(ABSPATH . 'wp-admin/includes/media.php');
+            require_once(ABSPATH . 'wp-admin/includes/image.php');
+            $attachment_id = media_handle_upload('avatar_file', 0);
+            if (!is_wp_error($attachment_id)) {
+                $url = wp_get_attachment_url($attachment_id);
+                update_user_meta($user_id, 'sportedia_avatar', $url);
+            }
+        }
+
+        wp_send_json_success('Profile updated successfully.');
     }
 
     public function ajax_upload_avatar() {

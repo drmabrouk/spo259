@@ -33,8 +33,13 @@ class Sportedia_Import_Export {
             wp_die('Unauthorized. Export functionality is restricted to authorized administrative users.');
         }
 
-        $type = isset($_GET['export_type']) ? sanitize_text_field($_GET['export_type']) : 'users';
-        Sportedia_DB::log_activity('csv_export', 'Exported ' . $type . ' CSV dataset.');
+        $type          = isset($_GET['export_type']) ? sanitize_text_field($_GET['export_type']) : 'users';
+        $search        = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
+        $branch_filter = isset($_GET['branch_filter']) ? intval($_GET['branch_filter']) : 0;
+        $status_filter = isset($_GET['status_filter']) ? sanitize_text_field($_GET['status_filter']) : '';
+        $role_filter   = isset($_GET['role_filter']) ? sanitize_text_field($_GET['role_filter']) : '';
+
+        Sportedia_DB::log_activity('csv_export', 'Exported ' . $type . ' CSV dataset with active filters.');
 
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename=sportedia_' . $type . '_' . date('Y-m-d') . '.csv');
@@ -43,19 +48,30 @@ class Sportedia_Import_Export {
 
         if ($type === 'branches') {
             fputcsv($output, array('Branch ID', 'Branch Name', 'Code', 'Phone', 'Email', 'Status'));
-            $branches = Sportedia_Branch_Manager::get_branches();
+            $branches = Sportedia_Branch_Manager::get_branches($search);
             foreach ($branches as $b) {
                 fputcsv($output, array($b['id'], $b['branch_name'], $b['code'], $b['phone'], $b['email'], $b['status']));
             }
         } else if ($type === 'subscriptions') {
-            fputcsv($output, array('Sub ID', 'Member', 'Employee ID', 'Plan Name', 'Type', 'Start Date', 'End Date', 'Price', 'Status'));
-            $subs = Sportedia_Subscription_Manager::get_subscriptions();
+            fputcsv($output, array('Sub ID', 'Invoice No', 'Member', 'Employee ID', 'Plan Name', 'Type', 'Start Date', 'End Date', 'Price', 'Status'));
+            $subs = Sportedia_Subscription_Manager::get_subscriptions($search, $branch_filter, $status_filter);
             foreach ($subs as $s) {
-                fputcsv($output, array($s['id'], $s['member_name'], $s['employee_id'], $s['plan_name'], $s['subscription_type'], $s['start_date'], $s['end_date'], $s['price'], $s['status']));
+                fputcsv($output, array(
+                    $s['id'],
+                    $s['invoice_number'],
+                    $s['member_name'],
+                    $s['employee_id'],
+                    $s['plan_name'],
+                    $s['subscription_type'],
+                    $s['start_date'],
+                    $s['end_date'],
+                    $s['price'],
+                    $s['status']
+                ));
             }
         } else if ($type === 'attendance') {
             fputcsv($output, array('Record ID', 'Employee ID', 'Employee Name', 'Role', 'Branch', 'Date', 'Scheduled Start', 'Check-In Time', 'Scheduled End', 'Check-Out Time', 'Lateness (Mins)', 'Working Duration (Mins)', 'Status'));
-            $att = Sportedia_Attendance_Manager::get_attendance('', 0, 0);
+            $att = Sportedia_Attendance_Manager::get_attendance($search, $branch_filter, 0);
             foreach ($att as $a) {
                 fputcsv($output, array(
                     $a['id'],
@@ -74,10 +90,10 @@ class Sportedia_Import_Export {
                 ));
             }
         } else {
-            fputcsv($output, array('User ID', 'Employee ID', 'Name', 'Email', 'Role', 'Status'));
-            $users = Sportedia_User_Manager::get_users();
+            fputcsv($output, array('User ID', 'Employee ID', 'Name', 'Email', 'Phone', 'Role', 'Status'));
+            $users = Sportedia_User_Manager::get_users($search, $role_filter, $branch_filter);
             foreach ($users as $u) {
-                fputcsv($output, array($u['id'], $u['employee_id'], $u['name'], $u['email'], $u['role'], $u['status']));
+                fputcsv($output, array($u['id'], $u['employee_id'], $u['name'], $u['email'], $u['phone'], $u['role'], $u['status']));
             }
         }
 
