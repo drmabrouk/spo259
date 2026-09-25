@@ -57,18 +57,20 @@ class Sportedia_Subscription_Manager {
 
         foreach ($results as $row) {
             $user = get_userdata($row['user_id']);
-            $user_name = $user ? $user->display_name : 'Unknown Member';
-            $emp_id    = get_user_meta($row['user_id'], 'sportedia_employee_id', true);
+            $user_name  = $user ? $user->display_name : 'Unknown Member';
+            $emp_id     = get_user_meta($row['user_id'], 'sportedia_employee_id', true);
+            $user_phone = get_user_meta($row['user_id'], 'sportedia_phone', true);
 
             if (!empty($search)) {
-                if (stripos($user_name, $search) === false && stripos($row['plan_name'], $search) === false && stripos($emp_id, $search) === false) {
+                if (stripos($user_name, $search) === false && stripos($row['plan_name'], $search) === false && stripos($emp_id, $search) === false && stripos($user_phone, $search) === false) {
                     continue;
                 }
             }
 
-            $row['member_name'] = $user_name;
-            $row['employee_id'] = $emp_id;
-            $subscriptions[] = $row;
+            $row['member_name']  = $user_name;
+            $row['employee_id']  = $emp_id;
+            $row['member_phone'] = $user_phone;
+            $subscriptions[]     = $row;
         }
 
         return $subscriptions;
@@ -84,22 +86,87 @@ class Sportedia_Subscription_Manager {
         global $wpdb;
         $table = $wpdb->prefix . 'sportedia_subscriptions';
 
-        $sub_id     = isset($_POST['sub_id']) ? intval($_POST['sub_id']) : 0;
-        $user_id    = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
-        $branch_id  = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
-        $program_id = isset($_POST['program_id']) ? intval($_POST['program_id']) : 0;
-        $plan_name  = sanitize_text_field($_POST['plan_name']);
-        $sub_type   = sanitize_text_field($_POST['subscription_type']);
-        $start_date = sanitize_text_field($_POST['start_date']);
-        $end_date   = sanitize_text_field($_POST['end_date']);
-        $price      = floatval($_POST['price']);
-        $status     = sanitize_text_field($_POST['status']);
+        $sub_id         = isset($_POST['sub_id']) ? intval($_POST['sub_id']) : 0;
+        $is_renewal     = isset($_POST['is_renewal']) && $_POST['is_renewal'] === '1';
+        $user_id        = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
+        $branch_id      = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
+        $program_id     = isset($_POST['program_id']) ? intval($_POST['program_id']) : 0;
+        $plan_name      = sanitize_text_field($_POST['plan_name']);
+        $sub_type       = sanitize_text_field($_POST['subscription_type']);
+        $start_date     = sanitize_text_field($_POST['start_date']);
+        $end_date       = sanitize_text_field($_POST['end_date']);
+        $price          = floatval($_POST['price']);
+        $notes          = sanitize_textarea_field($_POST['notes']);
+        $status         = sanitize_text_field($_POST['status']);
+
+        // New member inputs
+        $member_name    = sanitize_text_field($_POST['member_name']);
+        $member_phone   = sanitize_text_field($_POST['member_phone']);
+        $member_id      = sanitize_text_field($_POST['member_id']);
+        $member_email   = sanitize_email($_POST['member_email']);
+        $member_pass    = isset($_POST['member_password']) ? $_POST['member_password'] : '';
+
+        if ($sub_id === 0) {
+            if ($is_renewal) {
+                if ($user_id <= 0) {
+                    wp_send_json_error('Select or find an existing member for subscription renewal.');
+                }
+                $existing_user = get_userdata($user_id);
+                $member_name = $existing_user ? $existing_user->display_name : 'Member';
+                $member_phone = get_user_meta($user_id, 'sportedia_phone', true);
+                $member_id = get_user_meta($user_id, 'sportedia_employee_id', true);
+            } else {
+                // New Member Creation
+                if (empty($member_name) || empty($member_phone)) {
+                    wp_send_json_error('Member full name and mobile number are required.');
+                }
+
+                if (empty($member_id)) {
+                    $member_id = 'MEM-' . date('Ym') . rand(100, 999);
+                }
+
+                // Create WP User account so member appears in System Users
+                $username = strtolower(str_replace(' ', '', $member_id));
+                if (username_exists($username)) {
+                    $username = 'sp_' . $username . '_' . rand(10, 99);
+                }
+
+                if (empty($member_email)) {
+                    $member_email = $username . '@sportedia.online';
+                }
+
+                if (empty($member_pass)) {
+                    $member_pass = 'Sp#' . rand(100000, 999999);
+                }
+
+                $new_user_id = wp_create_user($username, $member_pass, $member_email);
+                if (is_wp_error($new_user_id)) {
+                    wp_send_json_error('Failed to create member account: ' . $new_user_id->get_error_message());
+                }
+
+                $user_id = $new_user_id;
+                $u = new WP_User($user_id);
+                $u->set_role('sportedia_customer');
+                wp_update_user(array('ID' => $user_id, 'display_name' => $member_name));
+
+                update_user_meta($user_id, 'sportedia_employee_id', $member_id);
+                update_user_meta($user_id, 'sportedia_phone', $member_phone);
+                update_user_meta($user_id, 'sportedia_status', 'active');
+
+                if ($branch_id > 0) {
+                    Sportedia_User_Manager::set_user_branches($user_id, array($branch_id));
+                }
+            }
+        }
 
         if ($user_id <= 0 || empty($plan_name) || empty($start_date) || empty($end_date)) {
             wp_send_json_error('Please fill in all required subscription fields.');
         }
 
+        $invoice_number = 'INV-' . date('Ymd') . '-' . rand(1000, 9999);
+
         $data = array(
+            'invoice_number'    => $invoice_number,
             'user_id'           => $user_id,
             'branch_id'         => $branch_id,
             'program_id'        => $program_id,
@@ -108,18 +175,40 @@ class Sportedia_Subscription_Manager {
             'start_date'        => $start_date,
             'end_date'          => $end_date,
             'price'             => $price,
+            'notes'             => $notes,
             'status'            => $status,
         );
 
-        $format = array('%d', '%d', '%d', '%s', '%s', '%s', '%s', '%f', '%s');
+        $format = array('%s', '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%f', '%s', '%s');
 
         if ($sub_id > 0) {
-            $wpdb->update($table, $data, array('id' => $sub_id), $format, array('%d'));
-            wp_send_json_success('Subscription updated successfully.');
+            unset($data['invoice_number']);
+            unset($format[0]);
+            $wpdb->update($table, $data, array('id' => $sub_id), array_values($format), array('%d'));
+            $res_invoice = $wpdb->get_var($wpdb->prepare("SELECT invoice_number FROM $table WHERE id = %d", $sub_id));
+            if (!empty($res_invoice)) $invoice_number = $res_invoice;
         } else {
             $wpdb->insert($table, $data, $format);
-            wp_send_json_success('Subscription created successfully.');
+            $sub_id = $wpdb->insert_id;
         }
+
+        $fin_calc = Sportedia_Finance::calculate_vat($price);
+
+        wp_send_json_success(array(
+            'message'        => 'Subscription saved successfully.',
+            'sub_id'         => $sub_id,
+            'invoice_number' => $invoice_number,
+            'user_id'        => $user_id,
+            'member_name'    => $member_name,
+            'member_phone'   => $member_phone,
+            'member_id'      => $member_id,
+            'plan_name'      => $plan_name,
+            'start_date'     => $start_date,
+            'end_date'       => $end_date,
+            'base_price'     => Sportedia_Finance::format_price($fin_calc['base']),
+            'vat'            => Sportedia_Finance::format_price($fin_calc['vat']),
+            'total'          => Sportedia_Finance::format_price($fin_calc['total']),
+        ));
     }
 
     public function ajax_delete_subscription() {

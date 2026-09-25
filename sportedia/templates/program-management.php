@@ -4,8 +4,9 @@ if (!defined('ABSPATH')) exit;
 $search = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
 $branch_filter = isset($_GET['branch_filter']) ? intval($_GET['branch_filter']) : 0;
 
-$programs     = Sportedia_Program_Manager::get_programs($search, $branch_filter);
-$branchesList = Sportedia_Branch_Manager::get_branches();
+$programs       = Sportedia_Program_Manager::get_programs($search, $branch_filter);
+$branchesList   = Sportedia_Branch_Manager::get_branches();
+$categoriesList = Sportedia_Program_Manager::get_categories();
 
 // Get Coaches list
 $coachesList = get_users(array('role' => 'sportedia_coach'));
@@ -53,6 +54,7 @@ $coachesList = get_users(array('role' => 'sportedia_coach'));
                 <th>Category</th>
                 <th>Branch</th>
                 <th>Assigned Coach</th>
+                <th>Sessions & Duration</th>
                 <th>Schedule</th>
                 <th>Capacity</th>
                 <th>Status</th>
@@ -66,9 +68,10 @@ $coachesList = get_users(array('role' => 'sportedia_coach'));
                 <?php foreach ($programs as $p) : ?>
                     <tr>
                         <td><strong><?php echo esc_html($p['program_name']); ?></strong></td>
-                        <td><?php echo esc_html($p['category']); ?></td>
+                        <td><span class="sp-badge"><?php echo esc_html($p['category']); ?></span></td>
                         <td><?php echo esc_html($p['branch_name']); ?></td>
                         <td><?php echo esc_html($p['coach_name']); ?></td>
+                        <td><?php echo esc_html($p['sessions_count']); ?> sessions (<?php echo esc_html($p['duration_days']); ?> days)</td>
                         <td><?php echo esc_html($p['schedule']); ?></td>
                         <td><?php echo esc_html($p['capacity']); ?> members</td>
                         <td>
@@ -106,8 +109,25 @@ $coachesList = get_users(array('role' => 'sportedia_coach'));
             </div>
 
             <div class="sp-form-group">
-                <input type="text" id="sp_prog_category" name="category" class="sp-floating-input" placeholder=" ">
-                <label for="sp_prog_category" class="sp-floating-label">Category (e.g. Swimming, Football, Fitness)</label>
+                <select id="sp_prog_category" name="category" class="sp-floating-select" required>
+                    <option value="">Select Sport Category</option>
+                    <?php foreach ($categoriesList as $cat) : ?>
+                        <option value="<?php echo esc_attr($cat); ?>"><?php echo esc_html($cat); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <label for="sp_prog_category" class="sp-floating-label">Sport Category *</label>
+            </div>
+
+            <div style="display: flex; gap: 12px;">
+                <div class="sp-form-group" style="flex: 1;">
+                    <input type="number" id="sp_prog_sessions" name="sessions_count" class="sp-floating-input" value="12" min="1" required>
+                    <label for="sp_prog_sessions" class="sp-floating-label">Number of Sessions</label>
+                </div>
+
+                <div class="sp-form-group" style="flex: 1;">
+                    <input type="number" id="sp_prog_duration" name="duration_days" class="sp-floating-input" value="30" min="1" required>
+                    <label for="sp_prog_duration" class="sp-floating-label">Duration (Days)</label>
+                </div>
             </div>
 
             <div style="display: flex; gap: 12px;">
@@ -175,6 +195,8 @@ function editProg(p) {
     jQuery('#sp_prog_category').val(p.category);
     jQuery('#sp_prog_branch_id').val(p.branch_id);
     jQuery('#sp_prog_coach_id').val(p.coach_id);
+    jQuery('#sp_prog_sessions').val(p.sessions_count || 12);
+    jQuery('#sp_prog_duration').val(p.duration_days || 30);
     jQuery('#sp_prog_schedule').val(p.schedule);
     jQuery('#sp_prog_capacity').val(p.capacity);
     jQuery('#sp_prog_status').val(p.status);

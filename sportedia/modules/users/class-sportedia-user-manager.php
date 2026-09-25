@@ -14,6 +14,7 @@ class Sportedia_User_Manager {
     public function __construct() {
         add_action('wp_ajax_sportedia_save_user', array($this, 'ajax_save_user'));
         add_action('wp_ajax_sportedia_delete_user', array($this, 'ajax_delete_user'));
+        add_action('wp_ajax_sportedia_upload_avatar', array($this, 'ajax_upload_avatar'));
     }
 
     public static function get_users($search = '', $role = '', $branch_id = 0) {
@@ -72,15 +73,21 @@ class Sportedia_User_Manager {
             }, (array) $u->roles);
 
             $result[] = array(
-                'id'           => $user_id,
-                'employee_id'  => $emp_id,
-                'username'     => $u->user_login,
-                'name'         => $u->display_name,
-                'email'        => $u->user_email,
-                'role'         => implode(', ', $user_role_names),
-                'role_key'     => !empty($u->roles) ? reset($u->roles) : '',
-                'status'       => $status,
-                'branches'     => $assigned_branches
+                'id'            => $user_id,
+                'employee_id'   => $emp_id,
+                'username'      => $u->user_login,
+                'name'          => $u->display_name,
+                'email'         => $u->user_email,
+                'phone'         => get_user_meta($user_id, 'sportedia_phone', true),
+                'height'        => get_user_meta($user_id, 'sportedia_height', true),
+                'weight'        => get_user_meta($user_id, 'sportedia_weight', true),
+                'health_status' => get_user_meta($user_id, 'sportedia_health_status', true),
+                'medical_notes' => get_user_meta($user_id, 'sportedia_medical_notes', true),
+                'avatar_url'    => get_user_meta($user_id, 'sportedia_avatar', true),
+                'role'          => implode(', ', $user_role_names),
+                'role_key'      => !empty($u->roles) ? reset($u->roles) : '',
+                'status'        => $status,
+                'branches'      => $assigned_branches
             );
         }
 
@@ -172,9 +179,62 @@ class Sportedia_User_Manager {
 
         update_user_meta($user_id, 'sportedia_employee_id', $employee_id);
         update_user_meta($user_id, 'sportedia_status', $status);
+        if (isset($_POST['phone'])) update_user_meta($user_id, 'sportedia_phone', sanitize_text_field($_POST['phone']));
+        if (isset($_POST['height'])) update_user_meta($user_id, 'sportedia_height', sanitize_text_field($_POST['height']));
+        if (isset($_POST['weight'])) update_user_meta($user_id, 'sportedia_weight', sanitize_text_field($_POST['weight']));
+        if (isset($_POST['health_status'])) update_user_meta($user_id, 'sportedia_health_status', sanitize_text_field($_POST['health_status']));
+        if (isset($_POST['medical_notes'])) update_user_meta($user_id, 'sportedia_medical_notes', sanitize_textarea_field($_POST['medical_notes']));
+
+        // Avatar Image Upload
+        if (!empty($_FILES['avatar_file']['tmp_name'])) {
+            if ($_FILES['avatar_file']['size'] > 2 * 1024 * 1024) {
+                wp_send_json_error('Profile photo exceeds 2 MB size limit.');
+            }
+            require_once(ABSPATH . 'wp-admin/includes/file.php');
+            require_once(ABSPATH . 'wp-admin/includes/media.php');
+            require_once(ABSPATH . 'wp-admin/includes/image.php');
+            $attachment_id = media_handle_upload('avatar_file', 0);
+            if (!is_wp_error($attachment_id)) {
+                $url = wp_get_attachment_url($attachment_id);
+                update_user_meta($user_id, 'sportedia_avatar', $url);
+            }
+        }
+
         self::set_user_branches($user_id, $branch_ids);
 
         wp_send_json_success('User saved successfully.');
+    }
+
+    public function ajax_upload_avatar() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : get_current_user_id();
+
+        if ($user_id !== get_current_user_id() && !current_user_can('sportedia_manage_users') && !Sportedia_Roles::is_sys_admin()) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        if (empty($_FILES['avatar_file']['tmp_name'])) {
+            wp_send_json_error('No image file selected.');
+        }
+
+        if ($_FILES['avatar_file']['size'] > 2 * 1024 * 1024) {
+            wp_send_json_error('Profile photo exceeds 2 MB size limit.');
+        }
+
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+        require_once(ABSPATH . 'wp-admin/includes/media.php');
+        require_once(ABSPATH . 'wp-admin/includes/image.php');
+
+        $attachment_id = media_handle_upload('avatar_file', 0);
+        if (is_wp_error($attachment_id)) {
+            wp_send_json_error($attachment_id->get_error_message());
+        }
+
+        $url = wp_get_attachment_url($attachment_id);
+        update_user_meta($user_id, 'sportedia_avatar', $url);
+
+        wp_send_json_success(array('message' => 'Profile photo updated.', 'avatar_url' => $url));
     }
 
     public function ajax_delete_user() {

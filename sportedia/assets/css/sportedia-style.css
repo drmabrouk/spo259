@@ -435,3 +435,25 @@ body.sportedia-app-body {
     padding: 72px 16px 24px 16px;
   }
 }
+
+/* Printable Invoice CSS Rules */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #spPrintableInvoice, #spPrintableInvoice * {
+    visibility: visible;
+  }
+  #spPrintableInvoice {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+  }
+  .sp-no-print {
+    display: none !important;
+  }
+}
