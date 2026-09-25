@@ -24,22 +24,45 @@ class Sportedia_Page_Generator {
             return $page_by_slug->ID;
         }
 
-        // Create new page
-        $page_data = array(
-            'post_title'     => 'Sportedia',
-            'post_name'      => 'sportedia',
-            'post_content'   => '<!-- sportedia_app -->',
-            'post_status'    => 'publish',
-            'post_type'      => 'page',
-            'comment_status' => 'closed'
-        );
+        // Create main app page if not existing
+        if (!$existing_page_id) {
+            $page_data = array(
+                'post_title'     => 'Sportedia',
+                'post_name'      => 'sportedia',
+                'post_content'   => '<!-- sportedia_app -->',
+                'post_status'    => 'publish',
+                'post_type'      => 'page',
+                'comment_status' => 'closed'
+            );
 
-        $page_id = wp_insert_post($page_data);
-        if ($page_id && !is_wp_error($page_id)) {
-            update_option('sportedia_page_id', $page_id);
-            return $page_id;
+            $page_id = wp_insert_post($page_data);
+            if ($page_id && !is_wp_error($page_id)) {
+                update_option('sportedia_page_id', $page_id);
+            }
         }
 
-        return false;
+        // Generate Attendance Kiosk Scan Page ('sportedia-scan')
+        $scan_page_id = get_option('sportedia_scan_page_id');
+        if (!$scan_page_id || !get_post($scan_page_id)) {
+            $scan_by_slug = get_page_by_path('sportedia-scan');
+            if ($scan_by_slug) {
+                update_option('sportedia_scan_page_id', $scan_by_slug->ID);
+            } else {
+                $scan_page_data = array(
+                    'post_title'     => 'Sportedia Attendance Kiosk',
+                    'post_name'      => 'sportedia-scan',
+                    'post_content'   => '<!-- sportedia_kiosk -->',
+                    'post_status'    => 'publish',
+                    'post_type'      => 'page',
+                    'comment_status' => 'closed'
+                );
+                $new_scan_id = wp_insert_post($scan_page_data);
+                if ($new_scan_id && !is_wp_error($new_scan_id)) {
+                    update_option('sportedia_scan_page_id', $new_scan_id);
+                }
+            }
+        }
+
+        return get_option('sportedia_page_id');
     }
 }

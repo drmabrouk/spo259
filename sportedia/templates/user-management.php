@@ -179,6 +179,33 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
                 <label for="sp_medical_notes" class="sp-floating-label">Health Problems / Medical Notes</label>
             </div>
 
+            <!-- Employee Work Schedule Configuration -->
+            <div style="margin-bottom: 20px; border: 1px solid var(--sp-border-color); padding: 12px; border-radius: var(--sp-radius);">
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 8px;">Employee Work Schedule</label>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                    <?php
+                    $days_list = array('Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday');
+                    foreach ($days_list as $day) :
+                    ?>
+                        <label style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                            <input type="checkbox" name="work_days[]" class="sp-work-day-cb" value="<?php echo esc_attr($day); ?>" checked>
+                            <?php echo esc_html(substr($day, 0, 3)); ?>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">Shift Start Time</label>
+                        <input type="time" id="sp_shift_start" name="shift_start" class="sp-floating-input" value="09:00">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">Shift End Time</label>
+                        <input type="time" id="sp_shift_end" name="shift_end" class="sp-floating-input" value="17:00">
+                    </div>
+                </div>
+            </div>
+
             <div class="sp-form-group">
                 <select id="sp_role" name="role" class="sp-floating-select" required>
                     <option value="sportedia_sys_admin">System Administrator</option>
@@ -231,6 +258,9 @@ function openUserModal() {
     jQuery('#sp_user_id').val('0');
     jQuery('#spUserForm')[0].reset();
     jQuery('.sp-branch-checkbox').prop('checked', false);
+    jQuery('.sp-work-day-cb').prop('checked', true);
+    jQuery('#sp_shift_start').val('09:00');
+    jQuery('#sp_shift_end').val('17:00');
     spOpenModal('spUserModal');
 }
 
@@ -254,6 +284,15 @@ function editUser(u) {
         u.branches.forEach(function(bId) {
             jQuery('.sp-branch-checkbox[value="' + bId + '"]').prop('checked', true);
         });
+    }
+
+    jQuery('.sp-work-day-cb').prop('checked', false);
+    if (u.work_schedule && u.work_schedule.days) {
+        u.work_schedule.days.forEach(function(d) {
+            jQuery('.sp-work-day-cb[value="' + d + '"]').prop('checked', true);
+        });
+        jQuery('#sp_shift_start').val(u.work_schedule.start || '09:00');
+        jQuery('#sp_shift_end').val(u.work_schedule.end || '17:00');
     }
 
     spOpenModal('spUserModal');

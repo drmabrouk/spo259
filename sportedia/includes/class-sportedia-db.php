@@ -82,8 +82,14 @@ class Sportedia_DB {
             branch_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
             program_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
             user_id bigint(20) UNSIGNED NOT NULL,
-            user_type varchar(50) DEFAULT 'customer' NOT NULL,
+            user_type varchar(50) DEFAULT 'employee' NOT NULL,
             attendance_date date NOT NULL,
+            check_in_time datetime DEFAULT NULL,
+            check_out_time datetime DEFAULT NULL,
+            scheduled_start time DEFAULT NULL,
+            scheduled_end time DEFAULT NULL,
+            lateness_minutes int(11) DEFAULT 0 NOT NULL,
+            working_duration_minutes int(11) DEFAULT 0 NOT NULL,
             status varchar(20) DEFAULT 'present' NOT NULL,
             checked_in_by bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -101,11 +107,48 @@ class Sportedia_DB {
             PRIMARY KEY  (setting_key)
         ) $charset_collate;";
 
+        // 7. Activity Log Table (Max 200 Retention)
+        $table_activity_log = $wpdb->prefix . 'sportedia_activity_log';
+        $sql_activity_log = "CREATE TABLE $table_activity_log (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
+            action varchar(191) NOT NULL,
+            details text DEFAULT '',
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY  (id),
+            KEY user_id (user_id)
+        ) $charset_collate;";
+
         dbDelta($sql_branches);
         dbDelta($sql_user_branches);
         dbDelta($sql_subscriptions);
         dbDelta($sql_programs);
         dbDelta($sql_attendance);
         dbDelta($sql_settings);
+        dbDelta($sql_activity_log);
+    }
+
+    public static function log_activity($action, $details = '', $user_id = 0) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'sportedia_activity_log';
+
+        if ($user_id <= 0) {
+            $user_id = get_current_user_id();
+        }
+
+        $wpdb->insert($table, array(
+            'user_id' => $user_id,
+            'action'  => sanitize_text_field($action),
+            'details' => sanitize_textarea_field($details)
+        ), array('%d', '%s', '%s'));
+
+        // Enforce maximum 200 records retention rule
+        $count = $wpdb->get_var("SELECT COUNT(*) FROM $table");
+        if ($count > 200) {
+            $cutoff = $wpdb->get_var("SELECT id FROM $table ORDER BY id DESC LIMIT 1 OFFSET 199");
+            if ($cutoff) {
+                $wpdb->query($wpdb->prepare("DELETE FROM $table WHERE id < %d", $cutoff));
+            }
+        }
     }
 }

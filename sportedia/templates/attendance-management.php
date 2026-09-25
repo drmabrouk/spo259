@@ -56,12 +56,17 @@ $usersList         = Sportedia_User_Manager::get_users();
     <table class="sp-table">
         <thead>
             <tr>
-                <th>User</th>
-                <th>User Type</th>
+                <th>Employee</th>
+                <th>Role & Branch</th>
                 <th>Date</th>
+                <th>Scheduled Shift</th>
+                <th>Check-In / Check-Out</th>
+                <th>Lateness</th>
+                <th>Working Duration</th>
                 <th>Status</th>
-                <th>Logged By</th>
-                <th style="text-align: right;">Actions</th>
+                <?php if (Sportedia_Roles::is_sys_admin() || Sportedia_Roles::is_general_mgr()) : ?>
+                    <th style="text-align: right;">Actions</th>
+                <?php endif; ?>
             </tr>
         </thead>
         <tbody>
@@ -70,24 +75,60 @@ $usersList         = Sportedia_User_Manager::get_users();
                     <tr>
                         <td>
                             <strong><?php echo esc_html($att['user_name']); ?></strong><br>
-                            <span style="font-size: 11px; color: var(--sp-text-muted);"><?php echo esc_html($att['employee_id']); ?></span>
+                            <span style="font-size: 11px; color: var(--sp-text-muted);">ID: <?php echo esc_html($att['employee_id']); ?></span>
                         </td>
-                        <td><?php echo esc_html(ucfirst($att['user_type'])); ?></td>
+                        <td>
+                            <span style="font-size: 13px; display: block;"><?php echo esc_html($att['role_label']); ?></span>
+                            <span style="font-size: 11px; color: var(--sp-text-muted);"><?php echo esc_html($att['branch_name']); ?></span>
+                        </td>
                         <td><?php echo esc_html($att['attendance_date']); ?></td>
+                        <td>
+                            <?php if (!empty($att['scheduled_start'])) : ?>
+                                <span style="font-size: 12px; font-weight: 600;"><?php echo esc_html($att['scheduled_start'] . ' - ' . $att['scheduled_end']); ?></span>
+                            <?php else : ?>
+                                <span style="color: var(--sp-text-muted); font-size: 12px;">Standard Shift</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <div style="font-size: 12px;">
+                                <div><strong>In:</strong> <?php echo esc_html($att['check_in_time'] ? date('H:i', strtotime($att['check_in_time'])) : '-'); ?></div>
+                                <div><strong>Out:</strong> <?php echo esc_html($att['check_out_time'] ? date('H:i', strtotime($att['check_out_time'])) : 'Active'); ?></div>
+                            </div>
+                        </td>
+                        <td>
+                            <?php if ($att['lateness_minutes'] > 0) : ?>
+                                <span style="color: #991b1b; font-weight: 600; font-size: 12px;"><?php echo esc_html($att['lateness_minutes']); ?> mins</span>
+                            <?php else : ?>
+                                <span style="color: #166534; font-weight: 600; font-size: 12px;">On Time</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php
+                            $dur = intval($att['working_duration_minutes']);
+                            if ($dur > 0) {
+                                $hrs = floor($dur / 60);
+                                $mins = $dur % 60;
+                                echo esc_html(($hrs > 0 ? $hrs . 'h ' : '') . $mins . 'm');
+                            } else {
+                                echo '<span style="color: var(--sp-text-muted); font-size: 12px;">In Progress</span>';
+                            }
+                            ?>
+                        </td>
                         <td>
                             <span class="sp-badge <?php echo $att['status'] === 'present' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
                                 <?php echo esc_html(ucfirst($att['status'])); ?>
                             </span>
                         </td>
-                        <td><?php echo esc_html($att['checked_in_by_name']); ?></td>
-                        <td style="text-align: right;">
-                            <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteAtt(<?php echo $att['id']; ?>)">Delete</button>
-                        </td>
+                        <?php if (Sportedia_Roles::is_sys_admin() || Sportedia_Roles::is_general_mgr()) : ?>
+                            <td style="text-align: right;">
+                                <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteAtt(<?php echo $att['id']; ?>)">Delete</button>
+                            </td>
+                        <?php endif; ?>
                     </tr>
                 <?php endforeach; ?>
             <?php else : ?>
                 <tr>
-                    <td colspan="6" style="text-align: center; color: var(--sp-text-muted); padding: 32px;">No attendance records found for this date.</td>
+                    <td colspan="9" style="text-align: center; color: var(--sp-text-muted); padding: 32px;">No employee attendance records found.</td>
                 </tr>
             <?php endif; ?>
         </tbody>

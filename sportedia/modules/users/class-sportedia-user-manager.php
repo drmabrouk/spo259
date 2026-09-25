@@ -72,6 +72,11 @@ class Sportedia_User_Manager {
                 return $role_obj ? $role_obj->name : $r;
             }, (array) $u->roles);
 
+            $schedule = get_user_meta($user_id, 'sportedia_work_schedule', true);
+            if (empty($schedule) || !is_array($schedule)) {
+                $schedule = array('days' => array('Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'), 'start' => '09:00', 'end' => '17:00');
+            }
+
             $result[] = array(
                 'id'            => $user_id,
                 'employee_id'   => $emp_id,
@@ -84,6 +89,7 @@ class Sportedia_User_Manager {
                 'health_status' => get_user_meta($user_id, 'sportedia_health_status', true),
                 'medical_notes' => get_user_meta($user_id, 'sportedia_medical_notes', true),
                 'avatar_url'    => get_user_meta($user_id, 'sportedia_avatar', true),
+                'work_schedule' => $schedule,
                 'role'          => implode(', ', $user_role_names),
                 'role_key'      => !empty($u->roles) ? reset($u->roles) : '',
                 'status'        => $status,
@@ -184,6 +190,17 @@ class Sportedia_User_Manager {
         if (isset($_POST['weight'])) update_user_meta($user_id, 'sportedia_weight', sanitize_text_field($_POST['weight']));
         if (isset($_POST['health_status'])) update_user_meta($user_id, 'sportedia_health_status', sanitize_text_field($_POST['health_status']));
         if (isset($_POST['medical_notes'])) update_user_meta($user_id, 'sportedia_medical_notes', sanitize_textarea_field($_POST['medical_notes']));
+
+        // Save Work Schedule
+        $work_days   = isset($_POST['work_days']) && is_array($_POST['work_days']) ? array_map('sanitize_text_field', $_POST['work_days']) : array('Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday');
+        $shift_start = isset($_POST['shift_start']) ? sanitize_text_field($_POST['shift_start']) : '09:00';
+        $shift_end   = isset($_POST['shift_end']) ? sanitize_text_field($_POST['shift_end']) : '17:00';
+
+        update_user_meta($user_id, 'sportedia_work_schedule', array(
+            'days'  => $work_days,
+            'start' => $shift_start,
+            'end'   => $shift_end
+        ));
 
         // Avatar Image Upload
         if (!empty($_FILES['avatar_file']['tmp_name'])) {
