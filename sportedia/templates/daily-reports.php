@@ -6,6 +6,7 @@ $branch_filter = isset($_GET['branch_filter']) ? intval($_GET['branch_filter']) 
 
 $reportData   = Sportedia_Reports_Manager::get_daily_report_data($report_date, $branch_filter);
 $branchesList = Sportedia_Branch_Manager::get_branches();
+$usersList    = Sportedia_User_Manager::get_users();
 $app_url      = get_permalink(get_option('sportedia_page_id'));
 $export_nonce = wp_create_nonce('sportedia_nonce');
 ?>
@@ -32,7 +33,11 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Attendance CSV
         </a>
-        <button class="sp-btn sp-btn-primary" onclick="openImportModal()">
+        <button class="sp-btn sp-btn-primary" onclick="openPayrollModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            Employee Payroll Slip
+        </button>
+        <button class="sp-btn sp-btn-secondary" onclick="openImportModal()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Import CSV Data
         </button>
@@ -87,6 +92,86 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
     <p style="color: var(--sp-text-muted); font-size: 14px;">Summary report data generated from active branches and member attendance tracking records.</p>
 </div>
 
+<!-- Employee Payroll Slip Generator Modal -->
+<div id="spPayrollModal" class="sp-modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:2000; align-items:center; justify-content:center;">
+    <div class="sp-card" style="width: 100%; max-width: 520px; margin: 20px;">
+        <h3 style="margin-top:0;">Generate Employee Payroll & Attendance Slip</h3>
+        <form id="spPayrollForm">
+            <div class="sp-form-group">
+                <select id="pay_user_id" name="user_id" class="sp-floating-select" required>
+                    <option value="">Select Employee / Staff Member</option>
+                    <?php foreach ($usersList as $u) : ?>
+                        <option value="<?php echo esc_attr($u['id']); ?>"><?php echo esc_html($u['name'] . ' (ID: ' . $u['employee_id'] . ')'); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <label for="pay_user_id" class="sp-floating-label">Employee</label>
+            </div>
+
+            <div class="sp-form-group">
+                <input type="month" id="pay_month_year" name="month_year" class="sp-floating-input" value="<?php echo esc_attr(date('Y-m')); ?>" required>
+                <label for="pay_month_year" class="sp-floating-label">Payroll Month</label>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button type="button" class="sp-btn sp-btn-secondary" onclick="spCloseModal('spPayrollModal')">Cancel</button>
+                <button type="submit" class="sp-btn sp-btn-primary">Generate Slip</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Printable Employee Payroll Slip Modal -->
+<div id="spPayrollReportModal" class="sp-modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:2100; align-items:center; justify-content:center;">
+    <div class="sp-card" style="width: 100%; max-width: 500px; margin: 20px;" id="spPrintableInvoice">
+        <div style="border-bottom: 1px solid var(--sp-border-color); padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between;">
+            <div>
+                <h2 style="margin: 0; font-size: 18px;">Attendance & Payroll Slip</h2>
+                <span id="pr_month" style="font-size: 12px; color: var(--sp-text-muted);">2026-03</span>
+            </div>
+            <div style="text-align: right;">
+                <strong>Sportedia Finance</strong>
+                <span style="display: block; font-size: 11px; color: var(--sp-text-muted);"><?php echo esc_html(date('Y-m-d')); ?></span>
+            </div>
+        </div>
+
+        <div style="font-size: 13px; margin-bottom: 16px;">
+            <div><strong>Employee:</strong> <span id="pr_emp_name">John Doe</span> (<span id="pr_emp_id">EMP-001</span>)</div>
+            <div><strong>Base Salary / Pay:</strong> <span id="pr_base_sal">AED 0.00</span></div>
+            <div><strong>Scheduled Work:</strong> <span id="pr_sched">22 days (176 hrs)</span></div>
+            <div><strong>Actual Present:</strong> <span id="pr_actual">22 days (176 hrs)</span></div>
+        </div>
+
+        <table style="width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 16px; background: #f8f9fa; border: 1px solid #e5e7eb; padding: 8px;">
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 6px;">Total Lateness (Mins)</td>
+                <td style="text-align: right; padding: 6px;" id="pr_late_mins">0 mins</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 6px;">Unexcused Absences</td>
+                <td style="text-align: right; padding: 6px;" id="pr_absent_days">0 days</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 6px;">Total Deductions</td>
+                <td style="text-align: right; padding: 6px; color: #991b1b; font-weight: 700;" id="pr_deductions">AED 0.00</td>
+            </tr>
+            <tr style="font-weight: 700; font-size: 14px;">
+                <td style="padding: 8px 6px;">Net Payable Amount</td>
+                <td style="text-align: right; padding: 8px 6px; color: #166534;" id="pr_net_pay">AED 0.00</td>
+            </tr>
+        </table>
+
+        <div style="margin-bottom: 16px; font-size: 12px; border-left: 3px solid #000000; padding-left: 10px;">
+            <strong>Calculation & Deduction Reasons:</strong>
+            <div id="pr_reasons" style="margin-top: 4px; color: var(--sp-text-muted);"></div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px;" class="sp-no-print">
+            <button type="button" class="sp-btn sp-btn-secondary" onclick="window.print()">Print Payroll Slip</button>
+            <button type="button" class="sp-btn sp-btn-secondary" onclick="spCloseModal('spPayrollReportModal')">Close</button>
+        </div>
+    </div>
+</div>
+
 <!-- Import Modal -->
 <div id="spImportModal" class="sp-modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:2000; align-items:center; justify-content:center;">
     <div class="sp-card" style="width: 100%; max-width: 480px; margin: 20px;">
@@ -110,6 +195,49 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
 function openImportModal() {
     spOpenModal('spImportModal');
 }
+
+function openPayrollModal() {
+    spOpenModal('spPayrollModal');
+}
+
+jQuery('#spPayrollForm').on('submit', function(e) {
+    e.preventDefault();
+    var userId = jQuery('#pay_user_id').val();
+    var monthYear = jQuery('#pay_month_year').val();
+
+    jQuery.post(sportedia_vars.ajax_url, {
+        action: 'sportedia_get_payroll_report',
+        nonce: sportedia_vars.nonce,
+        user_id: userId,
+        month_year: monthYear
+    }, function(res) {
+        if (res.success) {
+            var d = res.data;
+            spCloseModal('spPayrollModal');
+
+            jQuery('#pr_emp_name').text(d.employee_name);
+            jQuery('#pr_emp_id').text(d.employee_id);
+            jQuery('#pr_month').text(d.month_year);
+            jQuery('#pr_base_sal').text(d.base_salary);
+            jQuery('#pr_sched').text(d.scheduled_days + ' days (' + d.scheduled_hours + ' hrs)');
+            jQuery('#pr_actual').text(d.actual_present_days + ' days (' + d.actual_working_hours + ' hrs)');
+            jQuery('#pr_late_mins').text(d.total_lateness_mins + ' mins');
+            jQuery('#pr_absent_days').text(d.absent_days + ' days');
+            jQuery('#pr_deductions').text(d.total_deductions);
+            jQuery('#pr_net_pay').text(d.net_payable_amount);
+
+            var reasonsHtml = '';
+            d.deduction_reasons.forEach(function(r) {
+                reasonsHtml += '<div>• ' + r + '</div>';
+            });
+            jQuery('#pr_reasons').html(reasonsHtml);
+
+            spOpenModal('spPayrollReportModal');
+        } else {
+            alert(res.data || 'Failed to generate payroll slip.');
+        }
+    });
+});
 
 jQuery('#spImportForm').on('submit', function(e) {
     e.preventDefault();

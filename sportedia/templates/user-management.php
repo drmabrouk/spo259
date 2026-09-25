@@ -179,6 +179,28 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
                 <label for="sp_medical_notes" class="sp-floating-label">Health Problems / Medical Notes</label>
             </div>
 
+            <!-- Employee Salary & Payroll Configuration -->
+            <div style="margin-bottom: 20px; border: 1px solid var(--sp-border-color); padding: 12px; border-radius: var(--sp-radius);">
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 8px;">Employee Salary & Payroll Configuration</label>
+                <div style="display: flex; gap: 12px;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">Base Salary (AED)</label>
+                        <input type="number" step="0.01" id="sp_base_salary" name="base_salary" class="sp-floating-input" value="0.00">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">Pay Type</label>
+                        <select id="sp_pay_type" name="pay_type" class="sp-floating-select">
+                            <option value="monthly">Monthly Fixed</option>
+                            <option value="hourly">Hourly Rate</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 11px; font-weight: 600; display: block; margin-bottom: 4px;">Hourly Rate (AED)</label>
+                        <input type="number" step="0.01" id="sp_hourly_rate" name="hourly_rate" class="sp-floating-input" value="0.00">
+                    </div>
+                </div>
+            </div>
+
             <!-- Employee Work Schedule Configuration -->
             <div style="margin-bottom: 20px; border: 1px solid var(--sp-border-color); padding: 12px; border-radius: var(--sp-radius);">
                 <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 8px;">Employee Work Schedule</label>
@@ -275,6 +297,9 @@ function editUser(u) {
     jQuery('#sp_weight').val(u.weight || '');
     jQuery('#sp_health_status').val(u.health_status || 'Fit & Healthy');
     jQuery('#sp_medical_notes').val(u.medical_notes || '');
+    jQuery('#sp_base_salary').val(u.base_salary || '0.00');
+    jQuery('#sp_pay_type').val(u.pay_type || 'monthly');
+    jQuery('#sp_hourly_rate').val(u.hourly_rate || '0.00');
     jQuery('#sp_role').val(u.role_key);
     jQuery('#sp_status').val(u.status);
     jQuery('#sp_password').val('');
