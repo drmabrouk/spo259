@@ -63,6 +63,28 @@ class Sportedia_Page_Generator {
             }
         }
 
+        // Generate Verification System Page ('sportedia-verify')
+        $verify_page_id = get_option('sportedia_verify_page_id');
+        if (!$verify_page_id || !get_post($verify_page_id)) {
+            $verify_by_slug = get_page_by_path('sportedia-verify');
+            if ($verify_by_slug) {
+                update_option('sportedia_verify_page_id', $verify_by_slug->ID);
+            } else {
+                $verify_page_data = array(
+                    'post_title'     => 'Sportedia Verification System',
+                    'post_name'      => 'sportedia-verify',
+                    'post_content'   => '<!-- sportedia_verify -->',
+                    'post_status'    => 'publish',
+                    'post_type'      => 'page',
+                    'comment_status' => 'closed'
+                );
+                $new_verify_id = wp_insert_post($verify_page_data);
+                if ($new_verify_id && !is_wp_error($new_verify_id)) {
+                    update_option('sportedia_verify_page_id', $new_verify_id);
+                }
+            }
+        }
+
         return get_option('sportedia_page_id');
     }
 }

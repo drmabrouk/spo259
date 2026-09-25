@@ -25,6 +25,7 @@ class Sportedia_Dashboard {
         $total_branches = $wpdb->get_var("SELECT COUNT(*) FROM $branches_table WHERE status = 'active'");
         $total_subs     = $wpdb->get_var("SELECT COUNT(*) FROM $subs_table WHERE status = 'active'");
         $total_programs = $wpdb->get_var("SELECT COUNT(*) FROM $programs_table WHERE status = 'active'");
+        $sess_remain    = $wpdb->get_var("SELECT SUM(sessions_count - sessions_used) FROM $subs_table WHERE status = 'active'");
 
         $today = date('Y-m-d');
         $today_att  = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $att_table WHERE attendance_date = %s AND status = 'present'", $today));
@@ -32,11 +33,12 @@ class Sportedia_Dashboard {
         $total_users    = count_users()['total_users'];
 
         return array(
-            'total_branches' => $total_branches ? intval($total_branches) : 0,
-            'total_subs'     => $total_subs ? intval($total_subs) : 0,
-            'total_programs' => $total_programs ? intval($total_programs) : 0,
-            'today_att'      => $today_att ? intval($today_att) : 0,
-            'total_users'    => $total_users ? intval($total_users) : 0,
+            'total_branches'           => $total_branches ? intval($total_branches) : 0,
+            'total_subs'               => $total_subs ? intval($total_subs) : 0,
+            'total_programs'           => $total_programs ? intval($total_programs) : 0,
+            'today_att'                => $today_att ? intval($today_att) : 0,
+            'total_users'              => $total_users ? intval($total_users) : 0,
+            'total_sessions_remaining' => $sess_remain ? intval($sess_remain) : 0,
         );
     }
 }

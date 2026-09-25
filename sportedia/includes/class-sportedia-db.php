@@ -45,6 +45,8 @@ class Sportedia_DB {
             program_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
             plan_name varchar(191) NOT NULL,
             subscription_type varchar(50) DEFAULT 'monthly' NOT NULL,
+            sessions_count int(11) DEFAULT 12 NOT NULL,
+            sessions_used int(11) DEFAULT 0 NOT NULL,
             start_date date NOT NULL,
             end_date date NOT NULL,
             price decimal(10,2) DEFAULT '0.00' NOT NULL,

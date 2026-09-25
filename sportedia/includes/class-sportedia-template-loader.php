@@ -17,7 +17,16 @@ class Sportedia_Template_Loader {
         return is_page($scan_page_id) || is_page('sportedia-scan');
     }
 
+    public static function is_verify_page() {
+        $verify_page_id = get_option('sportedia_verify_page_id');
+        return is_page($verify_page_id) || is_page('sportedia-verify');
+    }
+
     public function load_sportedia_template($template) {
+        if (self::is_verify_page()) {
+            return SPORTEDIA_PLUGIN_DIR . 'templates/verification-system.php';
+        }
+
         if (self::is_scan_page()) {
             return SPORTEDIA_PLUGIN_DIR . 'templates/kiosk-attendance.php';
         }

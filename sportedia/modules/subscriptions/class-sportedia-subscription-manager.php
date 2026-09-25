@@ -14,6 +14,8 @@ class Sportedia_Subscription_Manager {
     public function __construct() {
         add_action('wp_ajax_sportedia_save_subscription', array($this, 'ajax_save_subscription'));
         add_action('wp_ajax_sportedia_delete_subscription', array($this, 'ajax_delete_subscription'));
+        add_action('wp_ajax_sportedia_verify_member_session', array($this, 'ajax_verify_member_session'));
+        add_action('wp_ajax_nopriv_sportedia_verify_member_session', array($this, 'ajax_verify_member_session'));
     }
 
     public static function auto_update_expired_subscriptions() {
@@ -208,6 +210,93 @@ class Sportedia_Subscription_Manager {
             'base_price'     => Sportedia_Finance::format_price($fin_calc['base']),
             'vat'            => Sportedia_Finance::format_price($fin_calc['vat']),
             'total'          => Sportedia_Finance::format_price($fin_calc['total']),
+        ));
+    }
+
+    public function ajax_verify_member_session() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        $barcode = isset($_POST['member_barcode']) ? sanitize_text_field($_POST['member_barcode']) : '';
+        if (empty($barcode)) {
+            wp_send_json_error('Please scan or enter a valid Member ID / Barcode.');
+        }
+
+        // 1. Locate member by sportedia_employee_id
+        $users = get_users(array(
+            'meta_key'   => 'sportedia_employee_id',
+            'meta_value' => $barcode,
+            'number'     => 1,
+        ));
+
+        if (empty($users)) {
+            $user_obj = get_user_by('login', $barcode);
+            if (!$user_obj) $user_obj = get_user_by('email', $barcode);
+            if ($user_obj) $users = array($user_obj);
+        }
+
+        if (empty($users)) {
+            wp_send_json_error('No member account found for Member ID / Barcode: ' . $barcode);
+        }
+
+        $member = $users[0];
+        $member_id = $member->ID;
+        $emp_id = get_user_meta($member_id, 'sportedia_employee_id', true);
+        if (empty($emp_id)) $emp_id = $barcode;
+
+        // 2. Find active subscription
+        global $wpdb;
+        $subs_table = $wpdb->prefix . 'sportedia_subscriptions';
+        $att_table  = $wpdb->prefix . 'sportedia_attendance';
+
+        self::auto_update_expired_subscriptions();
+
+        $sub = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $subs_table WHERE user_id = %d AND status = 'active' ORDER BY id DESC LIMIT 1",
+            $member_id
+        ), ARRAY_A);
+
+        if (!$sub) {
+            wp_send_json_error('No sessions remaining for this member.');
+        }
+
+        $total_sessions = intval($sub['sessions_count']);
+        if ($total_sessions <= 0) $total_sessions = 12;
+
+        $used_sessions  = intval($sub['sessions_used']);
+        $remaining      = $total_sessions - $used_sessions;
+
+        if ($remaining <= 0) {
+            wp_send_json_error('No sessions remaining for this member.');
+        }
+
+        // 3. Deduct 1 session
+        $new_used = $used_sessions + 1;
+        $new_remaining = $total_sessions - $new_used;
+
+        $wpdb->update($subs_table, array('sessions_used' => $new_used), array('id' => $sub['id']));
+
+        // Record attendance entry
+        $wpdb->insert($att_table, array(
+            'branch_id'                => intval($sub['branch_id']),
+            'program_id'               => intval($sub['program_id']),
+            'user_id'                  => $member_id,
+            'user_type'                => 'customer',
+            'attendance_date'          => date('Y-m-d'),
+            'check_in_time'            => date('Y-m-d H:i:s'),
+            'status'                   => 'present',
+            'checked_in_by'            => get_current_user_id()
+        ));
+
+        Sportedia_DB::log_activity('member_session_verified', 'Deducted 1 session for member ' . $member->display_name . ' (' . $emp_id . '). Remaining: ' . $new_remaining, $member_id);
+
+        wp_send_json_success(array(
+            'message'            => 'Member session verified and deducted successfully.',
+            'member_name'        => $member->display_name,
+            'member_id'          => $emp_id,
+            'plan_name'          => $sub['plan_name'],
+            'sessions_count'     => $total_sessions,
+            'sessions_used'      => $new_used,
+            'sessions_remaining' => $new_remaining
         ));
     }
 
