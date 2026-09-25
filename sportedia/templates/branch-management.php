@@ -5,7 +5,7 @@ $search = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
 $branches = Sportedia_Branch_Manager::get_branches($search);
 ?>
 
-<div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+<div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
     <div>
         <h1 class="sp-page-title">Branch Management</h1>
         <p class="sp-page-subtitle">Configure operational branches, locations, and facility settings.</p>
@@ -16,60 +16,72 @@ $branches = Sportedia_Branch_Manager::get_branches($search);
     </button>
 </div>
 
-<div class="sp-card" style="padding: 16px;">
+<div class="sp-card" style="padding: 16px; margin-bottom: 20px;">
     <form method="get" action="" style="display: flex; gap: 12px; flex-wrap: wrap;">
         <input type="hidden" name="module" value="branches">
         <div style="flex: 1; min-width: 200px;">
             <input type="text" name="search" class="sp-floating-input" placeholder="Search branch name or code..." value="<?php echo esc_attr($search); ?>">
         </div>
-        <button type="submit" class="sp-btn sp-btn-secondary">Search</button>
+        <button type="submit" class="sp-btn sp-btn-primary">Search</button>
     </form>
 </div>
 
-<div class="sp-table-wrapper">
-    <table class="sp-table">
-        <thead>
-            <tr>
-                <th>Branch Name</th>
-                <th>Code</th>
-                <th>Phone</th>
-                <th>Email</th>
-                <th>Status</th>
-                <th style="text-align: right;">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if (!empty($branches)) : ?>
-                <?php foreach ($branches as $b) : ?>
-                    <tr>
-                        <td><strong><?php echo esc_html($b['branch_name']); ?></strong></td>
-                        <td><code><?php echo esc_html($b['code']); ?></code></td>
-                        <td><?php echo esc_html($b['phone']); ?></td>
-                        <td><?php echo esc_html($b['email']); ?></td>
-                        <td>
-                            <span class="sp-badge <?php echo $b['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
-                                <?php echo esc_html(ucfirst($b['status'])); ?>
-                            </span>
-                        </td>
-                        <td style="text-align: right;">
-                            <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editBranch(<?php echo json_encode($b); ?>)'>Edit</button>
-                            <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteBranch(<?php echo $b['id']; ?>)">Delete</button>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php else : ?>
-                <tr>
-                    <td colspan="6" style="text-align: center; color: var(--sp-text-muted); padding: 32px;">No branches found.</td>
-                </tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
-</div>
+<!-- Modern Cards Display (Sorted Newest to Oldest) -->
+<?php if (!empty($branches)) : ?>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+        <?php foreach ($branches as $b) : ?>
+            <div class="sp-card" style="margin-bottom: 0; padding: 18px; border-radius: var(--sp-radius); display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                        <div>
+                            <strong style="font-size: 16px; color: var(--sp-text-main); display: block;"><?php echo esc_html($b['branch_name']); ?></strong>
+                            <code style="font-size: 11px; background: #f3f4f6; padding: 2px 6px; border-radius: 4px;"><?php echo esc_html($b['code']); ?></code>
+                        </div>
+                        <span class="sp-badge <?php echo $b['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                            <?php echo esc_html(ucfirst($b['status'])); ?>
+                        </span>
+                    </div>
+
+                    <div style="background: #f8f9fa; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 12px; font-size: 12px; margin-bottom: 14px;">
+                        <div style="margin-bottom: 6px;">
+                            <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">PHONE</span>
+                            <span><?php echo esc_html($b['phone'] ? $b['phone'] : 'N/A'); ?></span>
+                        </div>
+                        <div style="margin-bottom: 6px;">
+                            <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">EMAIL</span>
+                            <span><?php echo esc_html($b['email'] ? $b['email'] : 'N/A'); ?></span>
+                        </div>
+                        <?php if (!empty($b['address'])) : ?>
+                            <div style="margin-top: 6px; border-top: 1px dashed var(--sp-border-color); padding-top: 6px;">
+                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">ADDRESS</span>
+                                <span><?php echo esc_html($b['address']); ?></span>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--sp-border-color); padding-top: 10px; margin-top: auto;">
+                    <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editBranch(<?php echo json_encode($b); ?>)'>Edit</button>
+                    <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteBranch(<?php echo $b['id']; ?>)">Delete</button>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+<?php else : ?>
+    <div class="sp-card" style="text-align: center; color: var(--sp-text-muted); padding: 48px;">
+        <h3>No branches found</h3>
+        <p>No operational branches match your query.</p>
+    </div>
+<?php endif; ?>
 
 <!-- Branch Modal -->
-<div id="spBranchModal" class="sp-modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:2000; align-items:center; justify-content:center;">
-    <div class="sp-card" style="width: 100%; max-width: 500px; margin: 20px;">
-        <h3 id="spBranchModalTitle" style="margin-top:0;">Add Branch</h3>
+<div id="spBranchModal" class="sp-modal">
+    <div class="sp-modal-content" style="max-width: 500px;">
+        <div class="sp-modal-header">
+            <h3 id="spBranchModalTitle" class="sp-modal-title">Add Branch</h3>
+            <button type="button" class="sp-modal-close" onclick="spCloseModal('spBranchModal')">&times;</button>
+        </div>
+
         <form id="spBranchForm">
             <input type="hidden" id="sp_branch_id" name="branch_id" value="0">
 
@@ -83,14 +95,16 @@ $branches = Sportedia_Branch_Manager::get_branches($search);
                 <label for="sp_branch_code" class="sp-floating-label">Branch Code (e.g. BR-01)</label>
             </div>
 
-            <div class="sp-form-group">
-                <input type="text" id="sp_branch_phone" name="phone" class="sp-floating-input" placeholder=" ">
-                <label for="sp_branch_phone" class="sp-floating-label">Phone Number</label>
-            </div>
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
+                    <input type="text" id="sp_branch_phone" name="phone" class="sp-floating-input" placeholder=" ">
+                    <label for="sp_branch_phone" class="sp-floating-label">Phone Number</label>
+                </div>
 
-            <div class="sp-form-group">
-                <input type="email" id="sp_branch_email" name="email" class="sp-floating-input" placeholder=" ">
-                <label for="sp_branch_email" class="sp-floating-label">Email Address</label>
+                <div class="sp-form-group">
+                    <input type="email" id="sp_branch_email" name="email" class="sp-floating-input" placeholder=" ">
+                    <label for="sp_branch_email" class="sp-floating-label">Email Address</label>
+                </div>
             </div>
 
             <div class="sp-form-group">
@@ -106,7 +120,7 @@ $branches = Sportedia_Branch_Manager::get_branches($search);
                 <label for="sp_branch_status" class="sp-floating-label">Status</label>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+            <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--sp-border-color); padding-top: 16px;">
                 <button type="button" class="sp-btn sp-btn-secondary" onclick="spCloseModal('spBranchModal')">Cancel</button>
                 <button type="submit" class="sp-btn sp-btn-primary">Save Branch</button>
             </div>

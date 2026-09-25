@@ -2,11 +2,25 @@
 if (!defined('ABSPATH')) exit;
 
 $current_user = wp_get_current_user();
+$user_id      = $current_user->ID;
 $current_page = isset($_GET['module']) ? sanitize_text_field($_GET['module']) : 'dashboard';
-$app_url = get_permalink(get_option('sportedia_page_id'));
+$app_url      = get_permalink(get_option('sportedia_page_id'));
 
-$user_role_obj = !empty($current_user->roles) ? get_role(reset($current_user->roles)) : null;
+$user_role_obj  = !empty($current_user->roles) ? get_role(reset($current_user->roles)) : null;
 $user_role_name = $user_role_obj ? $user_role_obj->name : 'Sportedia User';
+
+$branding_name = Sportedia_Settings_Manager::get_setting('site_name', 'Sportedia');
+$branding_logo = Sportedia_Settings_Manager::get_setting('system_logo', '');
+
+// Fetch user profile fields for modal
+$user_avatar      = get_user_meta($user_id, 'sportedia_avatar', true);
+$user_nationality = get_user_meta($user_id, 'sportedia_nationality', true);
+$user_gender      = get_user_meta($user_id, 'sportedia_gender', true);
+$user_address     = get_user_meta($user_id, 'sportedia_address', true);
+$user_emirate     = get_user_meta($user_id, 'sportedia_emirate', true);
+if (empty($user_emirate)) $user_emirate = 'Dubai';
+
+$emirates_list = array('Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman', 'Umm Al Quwain', 'Ras Al Khaimah', 'Fujairah');
 
 $nav_items = array(
     'dashboard' => array(
@@ -63,8 +77,12 @@ $nav_items = array(
 
 <aside class="sp-sidebar-floating">
     <div class="sp-sidebar-brand">
-        <div class="sp-brand-logo">S</div>
-        <div class="sp-brand-name">Sportedia</div>
+        <?php if (!empty($branding_logo)) : ?>
+            <img src="<?php echo esc_url($branding_logo); ?>" style="width: 38px; height: 38px; border-radius: var(--sp-radius); object-fit: cover;">
+        <?php else : ?>
+            <div class="sp-brand-logo"><?php echo esc_html(strtoupper(substr($branding_name, 0, 1))); ?></div>
+        <?php endif; ?>
+        <div class="sp-brand-name"><?php echo esc_html($branding_name); ?></div>
     </div>
 
     <nav class="sp-sidebar-nav">
@@ -79,20 +97,132 @@ $nav_items = array(
         <?php endforeach; ?>
     </nav>
 
+    <!-- Merged Interactive User Profile Box with Logout Icon -->
     <div class="sp-sidebar-footer">
-        <div class="sp-user-badge">
-            <div class="sp-user-avatar">
-                <?php echo esc_html(strtoupper(substr($current_user->display_name, 0, 1))); ?>
-            </div>
+        <div class="sp-user-badge" style="cursor: pointer; position: relative; padding-right: 36px; transition: background 0.2s;" onclick="spOpenModal('spMyProfileModal')" title="Click to Edit Profile">
+            <?php if (!empty($user_avatar)) : ?>
+                <img src="<?php echo esc_url($user_avatar); ?>" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1px solid var(--sp-border-color); flex-shrink: 0;">
+            <?php else : ?>
+                <div class="sp-user-avatar">
+                    <?php echo esc_html(strtoupper(substr($current_user->display_name, 0, 1))); ?>
+                </div>
+            <?php endif; ?>
+
             <div class="sp-user-info">
                 <span class="sp-user-name"><?php echo esc_html($current_user->display_name); ?></span>
                 <span class="sp-user-role"><?php echo esc_html($user_role_name); ?></span>
             </div>
-        </div>
 
-        <a href="<?php echo esc_url(wp_logout_url($app_url)); ?>" class="sp-btn sp-btn-secondary sp-btn-sm" style="width: 100%;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Logout
-        </a>
+            <!-- Integrated Logout Icon inside Profile Box -->
+            <button type="button"
+                    onclick="event.stopPropagation(); window.location.href='<?php echo esc_url(wp_logout_url($app_url)); ?>';"
+                    title="Logout"
+                    style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; color: var(--sp-text-muted); padding: 4px; border-radius: 6px;"
+                    onmouseover="this.style.color='#dc2626'"
+                    onmouseout="this.style.color='var(--sp-text-muted)'">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+        </div>
     </div>
 </aside>
+
+<!-- Interactive My Profile Editor Modal -->
+<div id="spMyProfileModal" class="sp-modal">
+    <div class="sp-modal-content" style="max-width: 600px;">
+        <div class="sp-modal-header">
+            <h3 class="sp-modal-title">My Account Profile Settings</h3>
+            <button type="button" class="sp-modal-close" onclick="spCloseModal('spMyProfileModal')">&times;</button>
+        </div>
+
+        <form id="spMyProfileForm" enctype="multipart/form-data">
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
+                    <input type="text" id="prof_name" name="display_name" class="sp-floating-input" value="<?php echo esc_attr($current_user->display_name); ?>" required>
+                    <label for="prof_name" class="sp-floating-label">Full Name *</label>
+                </div>
+
+                <div class="sp-form-group">
+                    <input type="email" id="prof_email" name="email" class="sp-floating-input" value="<?php echo esc_attr($current_user->user_email); ?>" required>
+                    <label for="prof_email" class="sp-floating-label">Email Address *</label>
+                </div>
+            </div>
+
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
+                    <input type="password" id="prof_password" name="password" class="sp-floating-input" placeholder=" ">
+                    <label for="prof_password" class="sp-floating-label">Password (leave blank to keep unchanged)</label>
+                </div>
+
+                <div class="sp-form-group">
+                    <input type="text" id="prof_nationality" name="nationality" class="sp-floating-input" value="<?php echo esc_attr($user_nationality); ?>" placeholder=" ">
+                    <label for="prof_nationality" class="sp-floating-label">Nationality</label>
+                </div>
+            </div>
+
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
+                    <select id="prof_gender" name="gender" class="sp-floating-select">
+                        <option value="Male" <?php selected($user_gender, 'Male'); ?>>Male</option>
+                        <option value="Female" <?php selected($user_gender, 'Female'); ?>>Female</option>
+                        <option value="Other" <?php selected($user_gender, 'Other'); ?>>Other</option>
+                    </select>
+                    <label for="prof_gender" class="sp-floating-label">Gender</label>
+                </div>
+
+                <div class="sp-form-group">
+                    <select id="prof_emirate" name="emirate" class="sp-floating-select">
+                        <?php foreach ($emirates_list as $em) : ?>
+                            <option value="<?php echo esc_attr($em); ?>" <?php selected($user_emirate, $em); ?>><?php echo esc_html($em); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <label for="prof_emirate" class="sp-floating-label">Emirate (UAE)</label>
+                </div>
+            </div>
+
+            <div class="sp-form-group">
+                <input type="text" value="United Arab Emirates" class="sp-floating-input" disabled readonly style="background: #f3f4f6;">
+                <label class="sp-floating-label">Country (Fixed)</label>
+            </div>
+
+            <div class="sp-form-group">
+                <textarea id="prof_address" name="address" class="sp-floating-input" style="height: 60px;" placeholder=" "><?php echo esc_textarea($user_address); ?></textarea>
+                <label for="prof_address" class="sp-floating-label">Physical Address</label>
+            </div>
+
+            <div style="margin-bottom: 20px; border: 1px dashed var(--sp-border-color); padding: 12px; border-radius: var(--sp-radius);">
+                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px;">Profile Photo (Max 2 MB)</label>
+                <input type="file" id="prof_avatar" name="avatar_file" accept="image/*" style="font-size: 12px;">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button type="button" class="sp-btn sp-btn-secondary" onclick="spCloseModal('spMyProfileModal')">Cancel</button>
+                <button type="submit" class="sp-btn sp-btn-primary">Save Profile Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+jQuery('#spMyProfileForm').on('submit', function(e) {
+    e.preventDefault();
+    var formData = new FormData(this);
+    formData.append('action', 'sportedia_update_my_profile');
+    formData.append('nonce', sportedia_vars.nonce);
+
+    jQuery.ajax({
+        url: sportedia_vars.ajax_url,
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function(res) {
+            if (res.success) {
+                alert(res.data);
+                location.reload();
+            } else {
+                alert(res.data || 'Failed to update profile.');
+            }
+        }
+    });
+});
+</script>

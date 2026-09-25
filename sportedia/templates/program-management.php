@@ -22,7 +22,7 @@ foreach ((array)$curr_u->roles as $r) {
 }
 ?>
 
-<div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+<div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
     <div>
         <h1 class="sp-page-title">Program Management</h1>
         <p class="sp-page-subtitle">Configure training programs, assigned coaches, branch schedules, and capacities.</p>
@@ -35,7 +35,7 @@ foreach ((array)$curr_u->roles as $r) {
     <?php endif; ?>
 </div>
 
-<div class="sp-card" style="padding: 16px;">
+<div class="sp-card" style="padding: 16px; margin-bottom: 20px;">
     <form method="get" action="" style="display: flex; gap: 12px; flex-wrap: wrap;">
         <input type="hidden" name="module" value="programs">
 
@@ -52,66 +52,79 @@ foreach ((array)$curr_u->roles as $r) {
             </select>
         </div>
 
-        <button type="submit" class="sp-btn sp-btn-secondary">Filter</button>
+        <button type="submit" class="sp-btn sp-btn-primary">Filter</button>
     </form>
 </div>
 
-<div class="sp-table-wrapper">
-    <table class="sp-table">
-        <thead>
-            <tr>
-                <th>Program Name</th>
-                <th>Category</th>
-                <th>Branch</th>
-                <th>Assigned Coach</th>
-                <?php if ($can_view_session_count) : ?><th>Sessions & Duration</th><?php endif; ?>
-                <th>Schedule</th>
-                <th>Capacity</th>
-                <th>Status</th>
-                <?php if (current_user_can('sportedia_manage_programs') || Sportedia_Roles::is_sys_admin()) : ?>
-                    <th style="text-align: right;">Actions</th>
-                <?php endif; ?>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if (!empty($programs)) : ?>
-                <?php foreach ($programs as $p) : ?>
-                    <tr>
-                        <td><strong><?php echo esc_html($p['program_name']); ?></strong></td>
-                        <td><span class="sp-badge"><?php echo esc_html($p['category']); ?></span></td>
-                        <td><?php echo esc_html($p['branch_name']); ?></td>
-                        <td><?php echo esc_html($p['coach_name']); ?></td>
+<!-- Cards Display (Sorted Newest to Oldest) -->
+<?php if (!empty($programs)) : ?>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+        <?php foreach ($programs as $p) : ?>
+            <div class="sp-card" style="margin-bottom: 0; padding: 18px; border-radius: var(--sp-radius); display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                        <strong style="font-size: 16px; color: var(--sp-text-main);"><?php echo esc_html($p['program_name']); ?></strong>
+                        <span class="sp-badge <?php echo $p['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                            <?php echo esc_html(ucfirst($p['status'])); ?>
+                        </span>
+                    </div>
+
+                    <div style="margin-bottom: 12px;">
+                        <span class="sp-badge" style="background: #f3f4f6; border-color: #e5e7eb; color: #111;"><?php echo esc_html($p['category']); ?></span>
+                    </div>
+
+                    <div style="background: #f8f9fa; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 12px; font-size: 12px; margin-bottom: 14px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>
+                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">BRANCH</span>
+                                <strong><?php echo esc_html($p['branch_name']); ?></strong>
+                            </div>
+                            <div>
+                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">COACH</span>
+                                <strong><?php echo esc_html($p['coach_name']); ?></strong>
+                            </div>
+                            <div>
+                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">SCHEDULE</span>
+                                <span><?php echo esc_html($p['schedule'] ? $p['schedule'] : 'Flexible'); ?></span>
+                            </div>
+                            <div>
+                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">CAPACITY</span>
+                                <span><?php echo esc_html($p['capacity']); ?> members</span>
+                            </div>
+                        </div>
+
                         <?php if ($can_view_session_count) : ?>
-                            <td><?php echo esc_html($p['sessions_count']); ?> sessions (<?php echo esc_html($p['duration_days']); ?> days)</td>
+                            <div style="margin-top: 8px; border-top: 1px dashed var(--sp-border-color); padding-top: 6px; font-weight: 600; color: #166534;">
+                                <?php echo esc_html($p['sessions_count']); ?> Sessions (<?php echo esc_html($p['duration_days']); ?> Days Duration)
+                            </div>
                         <?php endif; ?>
-                        <td><?php echo esc_html($p['schedule']); ?></td>
-                        <td><?php echo esc_html($p['capacity']); ?> members</td>
-                        <td>
-                            <span class="sp-badge <?php echo $p['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
-                                <?php echo esc_html(ucfirst($p['status'])); ?>
-                            </span>
-                        </td>
-                        <?php if (current_user_can('sportedia_manage_programs') || Sportedia_Roles::is_sys_admin()) : ?>
-                            <td style="text-align: right;">
-                                <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editProg(<?php echo json_encode($p); ?>)'>Edit</button>
-                                <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteProg(<?php echo $p['id']; ?>)">Delete</button>
-                            </td>
-                        <?php endif; ?>
-                    </tr>
-                <?php endforeach; ?>
-            <?php else : ?>
-                <tr>
-                    <td colspan="8" style="text-align: center; color: var(--sp-text-muted); padding: 32px;">No training programs found.</td>
-                </tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
-</div>
+                    </div>
+                </div>
+
+                <?php if (current_user_can('sportedia_manage_programs') || Sportedia_Roles::is_sys_admin()) : ?>
+                    <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--sp-border-color); padding-top: 10px; margin-top: auto;">
+                        <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editProg(<?php echo json_encode($p); ?>)'>Edit</button>
+                        <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteProg(<?php echo $p['id']; ?>)">Delete</button>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+    </div>
+<?php else : ?>
+    <div class="sp-card" style="text-align: center; color: var(--sp-text-muted); padding: 48px;">
+        <h3>No training programs found</h3>
+        <p>No programs match your search query.</p>
+    </div>
+<?php endif; ?>
 
 <!-- Program Modal -->
-<div id="spProgModal" class="sp-modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:2000; align-items:center; justify-content:center;">
-    <div class="sp-card" style="width: 100%; max-width: 500px; margin: 20px;">
-        <h3 id="spProgModalTitle" style="margin-top:0;">Add Program</h3>
+<div id="spProgModal" class="sp-modal">
+    <div class="sp-modal-content" style="max-width: 520px;">
+        <div class="sp-modal-header">
+            <h3 id="spProgModalTitle" class="sp-modal-title">Add Program</h3>
+            <button type="button" class="sp-modal-close" onclick="spCloseModal('spProgModal')">&times;</button>
+        </div>
+
         <form id="spProgForm">
             <input type="hidden" id="sp_prog_id" name="program_id" value="0">
 
@@ -130,20 +143,20 @@ foreach ((array)$curr_u->roles as $r) {
                 <label for="sp_prog_category" class="sp-floating-label">Sport Category *</label>
             </div>
 
-            <div style="display: flex; gap: 12px;">
-                <div class="sp-form-group" style="flex: 1;">
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
                     <input type="number" id="sp_prog_sessions" name="sessions_count" class="sp-floating-input" value="12" min="1" required>
                     <label for="sp_prog_sessions" class="sp-floating-label">Number of Sessions</label>
                 </div>
 
-                <div class="sp-form-group" style="flex: 1;">
+                <div class="sp-form-group">
                     <input type="number" id="sp_prog_duration" name="duration_days" class="sp-floating-input" value="30" min="1" required>
                     <label for="sp_prog_duration" class="sp-floating-label">Duration (Days)</label>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 12px;">
-                <div class="sp-form-group" style="flex: 1;">
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
                     <select id="sp_prog_branch_id" name="branch_id" class="sp-floating-select">
                         <option value="0">All Branches</option>
                         <?php foreach ($branchesList as $b) : ?>
@@ -153,7 +166,7 @@ foreach ((array)$curr_u->roles as $r) {
                     <label for="sp_prog_branch_id" class="sp-floating-label">Branch</label>
                 </div>
 
-                <div class="sp-form-group" style="flex: 1;">
+                <div class="sp-form-group">
                     <select id="sp_prog_coach_id" name="coach_id" class="sp-floating-select">
                         <option value="0">Unassigned</option>
                         <?php foreach ($coachesList as $c) : ?>
@@ -169,13 +182,13 @@ foreach ((array)$curr_u->roles as $r) {
                 <label for="sp_prog_schedule" class="sp-floating-label">Schedule (e.g. Mon, Wed, Fri 4:00 PM)</label>
             </div>
 
-            <div style="display: flex; gap: 12px;">
-                <div class="sp-form-group" style="flex: 1;">
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
                     <input type="number" id="sp_prog_capacity" name="capacity" class="sp-floating-input" placeholder=" " value="20">
                     <label for="sp_prog_capacity" class="sp-floating-label">Capacity Limit</label>
                 </div>
 
-                <div class="sp-form-group" style="flex: 1;">
+                <div class="sp-form-group">
                     <select id="sp_prog_status" name="status" class="sp-floating-select">
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
@@ -184,7 +197,7 @@ foreach ((array)$curr_u->roles as $r) {
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+            <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--sp-border-color); padding-top: 16px;">
                 <button type="button" class="sp-btn sp-btn-secondary" onclick="spCloseModal('spProgModal')">Cancel</button>
                 <button type="submit" class="sp-btn sp-btn-primary">Save Program</button>
             </div>
