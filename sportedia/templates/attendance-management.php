@@ -1,0 +1,200 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+$att_date      = isset($_GET['att_date']) ? sanitize_text_field($_GET['att_date']) : date('Y-m-d');
+$branch_filter = isset($_GET['branch_filter']) ? intval($_GET['branch_filter']) : 0;
+$program_filter= isset($_GET['program_filter']) ? intval($_GET['program_filter']) : 0;
+
+$attendanceRecords = Sportedia_Attendance_Manager::get_attendance($att_date, $branch_filter, $program_filter);
+$branchesList      = Sportedia_Branch_Manager::get_branches();
+$programsList      = Sportedia_Program_Manager::get_programs();
+$usersList         = Sportedia_User_Manager::get_users();
+?>
+
+<div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div>
+        <h1 class="sp-page-title">Attendance Management</h1>
+        <p class="sp-page-subtitle">Track daily check-ins for members and coaches across branches and programs.</p>
+    </div>
+    <button class="sp-btn sp-btn-primary" onclick="openAttModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Record Attendance
+    </button>
+</div>
+
+<div class="sp-card" style="padding: 16px;">
+    <form method="get" action="" style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <input type="hidden" name="module" value="attendance">
+
+        <div style="width: 180px;">
+            <input type="date" name="att_date" class="sp-floating-input" value="<?php echo esc_attr($att_date); ?>">
+        </div>
+
+        <div style="width: 180px;">
+            <select name="branch_filter" class="sp-floating-select">
+                <option value="0">All Branches</option>
+                <?php foreach ($branchesList as $b) : ?>
+                    <option value="<?php echo esc_attr($b['id']); ?>" <?php selected($branch_filter, $b['id']); ?>><?php echo esc_html($b['branch_name']); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <div style="width: 180px;">
+            <select name="program_filter" class="sp-floating-select">
+                <option value="0">All Programs</option>
+                <?php foreach ($programsList as $p) : ?>
+                    <option value="<?php echo esc_attr($p['id']); ?>" <?php selected($program_filter, $p['id']); ?>><?php echo esc_html($p['program_name']); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <button type="submit" class="sp-btn sp-btn-secondary">Filter Records</button>
+    </form>
+</div>
+
+<div class="sp-table-wrapper">
+    <table class="sp-table">
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>User Type</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Logged By</th>
+                <th style="text-align: right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (!empty($attendanceRecords)) : ?>
+                <?php foreach ($attendanceRecords as $att) : ?>
+                    <tr>
+                        <td>
+                            <strong><?php echo esc_html($att['user_name']); ?></strong><br>
+                            <span style="font-size: 11px; color: var(--sp-text-muted);"><?php echo esc_html($att['employee_id']); ?></span>
+                        </td>
+                        <td><?php echo esc_html(ucfirst($att['user_type'])); ?></td>
+                        <td><?php echo esc_html($att['attendance_date']); ?></td>
+                        <td>
+                            <span class="sp-badge <?php echo $att['status'] === 'present' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                                <?php echo esc_html(ucfirst($att['status'])); ?>
+                            </span>
+                        </td>
+                        <td><?php echo esc_html($att['checked_in_by_name']); ?></td>
+                        <td style="text-align: right;">
+                            <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteAtt(<?php echo $att['id']; ?>)">Delete</button>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php else : ?>
+                <tr>
+                    <td colspan="6" style="text-align: center; color: var(--sp-text-muted); padding: 32px;">No attendance records found for this date.</td>
+                </tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
+</div>
+
+<!-- Attendance Modal -->
+<div id="spAttModal" class="sp-modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:2000; align-items:center; justify-content:center;">
+    <div class="sp-card" style="width: 100%; max-width: 480px; margin: 20px;">
+        <h3 style="margin-top:0;">Record Attendance</h3>
+        <form id="spAttForm">
+
+            <div class="sp-form-group">
+                <select id="sp_att_user_id" name="user_id" class="sp-floating-select" required>
+                    <option value="">Select Member or Coach</option>
+                    <?php foreach ($usersList as $u) : ?>
+                        <option value="<?php echo esc_attr($u['id']); ?>"><?php echo esc_html($u['name'] . ' (' . $u['role'] . ')'); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <label for="sp_att_user_id" class="sp-floating-label">User</label>
+            </div>
+
+            <div style="display: flex; gap: 12px;">
+                <div class="sp-form-group" style="flex: 1;">
+                    <select id="sp_att_branch_id" name="branch_id" class="sp-floating-select">
+                        <option value="0">Default Branch</option>
+                        <?php foreach ($branchesList as $b) : ?>
+                            <option value="<?php echo esc_attr($b['id']); ?>"><?php echo esc_html($b['branch_name']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <label for="sp_att_branch_id" class="sp-floating-label">Branch</label>
+                </div>
+
+                <div class="sp-form-group" style="flex: 1;">
+                    <select id="sp_att_program_id" name="program_id" class="sp-floating-select">
+                        <option value="0">General Check-in</option>
+                        <?php foreach ($programsList as $p) : ?>
+                            <option value="<?php echo esc_attr($p['id']); ?>"><?php echo esc_html($p['program_name']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <label for="sp_att_program_id" class="sp-floating-label">Program</label>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px;">
+                <div class="sp-form-group" style="flex: 1;">
+                    <input type="date" id="sp_att_date" name="attendance_date" class="sp-floating-input" value="<?php echo esc_attr(date('Y-m-d')); ?>" required>
+                    <label for="sp_att_date" class="sp-floating-label">Date</label>
+                </div>
+
+                <div class="sp-form-group" style="flex: 1;">
+                    <select id="sp_att_user_type" name="user_type" class="sp-floating-select">
+                        <option value="customer">Customer</option>
+                        <option value="coach">Coach / Trainer</option>
+                    </select>
+                    <label for="sp_att_user_type" class="sp-floating-label">User Type</label>
+                </div>
+            </div>
+
+            <div class="sp-form-group">
+                <select id="sp_att_status" name="status" class="sp-floating-select">
+                    <option value="present">Present</option>
+                    <option value="absent">Absent</option>
+                    <option value="late">Late</option>
+                </select>
+                <label for="sp_att_status" class="sp-floating-label">Attendance Status</label>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button type="button" class="sp-btn sp-btn-secondary" onclick="spCloseModal('spAttModal')">Cancel</button>
+                <button type="submit" class="sp-btn sp-btn-primary">Save Check-in</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openAttModal() {
+    jQuery('#spAttForm')[0].reset();
+    spOpenModal('spAttModal');
+}
+
+function deleteAtt(attId) {
+    if (confirm('Are you sure you want to delete this attendance record?')) {
+        jQuery.post(sportedia_vars.ajax_url, {
+            action: 'sportedia_delete_attendance',
+            nonce: sportedia_vars.nonce,
+            att_id: attId
+        }, function(response) {
+            if (response.success) {
+                location.reload();
+            } else {
+                alert(response.data || 'Failed to delete record.');
+            }
+        });
+    }
+}
+
+jQuery('#spAttForm').on('submit', function(e) {
+    e.preventDefault();
+    var formData = jQuery(this).serialize() + '&action=sportedia_record_attendance&nonce=' + sportedia_vars.nonce;
+    jQuery.post(sportedia_vars.ajax_url, formData, function(response) {
+        if (response.success) {
+            location.reload();
+        } else {
+            alert(response.data || 'Error recording attendance.');
+        }
+    });
+});
+</script>

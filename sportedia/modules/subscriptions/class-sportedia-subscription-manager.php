@@ -1,0 +1,132 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+class Sportedia_Subscription_Manager {
+    private static $instance = null;
+
+    public static function instance() {
+        if (is_null(self::$instance)) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    public function __construct() {
+        add_action('wp_ajax_sportedia_save_subscription', array($this, 'ajax_save_subscription'));
+        add_action('wp_ajax_sportedia_delete_subscription', array($this, 'ajax_delete_subscription'));
+    }
+
+    public static function get_subscriptions($search = '', $branch_id = 0, $status = '') {
+        global $wpdb;
+        $table = $wpdb->prefix . 'sportedia_subscriptions';
+
+        $where = array('1=1');
+        $params = array();
+
+        if ($branch_id > 0) {
+            $where[] = 's.branch_id = %d';
+            $params[] = $branch_id;
+        }
+
+        if (!empty($status)) {
+            $where[] = 's.status = %s';
+            $params[] = $status;
+        }
+
+        $where_sql = implode(' AND ', $where);
+
+        if (!empty($params)) {
+            $sql = $wpdb->prepare("SELECT s.* FROM $table s WHERE $where_sql ORDER BY s.id DESC", $params);
+        } else {
+            $sql = "SELECT s.* FROM $table s WHERE $where_sql ORDER BY s.id DESC";
+        }
+
+        $results = $wpdb->get_results($sql, ARRAY_A);
+        $subscriptions = array();
+
+        foreach ($results as $row) {
+            $user = get_userdata($row['user_id']);
+            $user_name = $user ? $user->display_name : 'Unknown Member';
+            $emp_id    = get_user_meta($row['user_id'], 'sportedia_employee_id', true);
+
+            if (!empty($search)) {
+                if (stripos($user_name, $search) === false && stripos($row['plan_name'], $search) === false && stripos($emp_id, $search) === false) {
+                    continue;
+                }
+            }
+
+            $row['member_name'] = $user_name;
+            $row['employee_id'] = $emp_id;
+            $subscriptions[] = $row;
+        }
+
+        return $subscriptions;
+    }
+
+    public function ajax_save_subscription() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        if (!current_user_can('sportedia_manage_subscriptions') && !Sportedia_Roles::is_sys_admin()) {
+            wp_send_json_error('Unauthorized.');
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'sportedia_subscriptions';
+
+        $sub_id     = isset($_POST['sub_id']) ? intval($_POST['sub_id']) : 0;
+        $user_id    = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
+        $branch_id  = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
+        $program_id = isset($_POST['program_id']) ? intval($_POST['program_id']) : 0;
+        $plan_name  = sanitize_text_field($_POST['plan_name']);
+        $sub_type   = sanitize_text_field($_POST['subscription_type']);
+        $start_date = sanitize_text_field($_POST['start_date']);
+        $end_date   = sanitize_text_field($_POST['end_date']);
+        $price      = floatval($_POST['price']);
+        $status     = sanitize_text_field($_POST['status']);
+
+        if ($user_id <= 0 || empty($plan_name) || empty($start_date) || empty($end_date)) {
+            wp_send_json_error('Please fill in all required subscription fields.');
+        }
+
+        $data = array(
+            'user_id'           => $user_id,
+            'branch_id'         => $branch_id,
+            'program_id'        => $program_id,
+            'plan_name'         => $plan_name,
+            'subscription_type' => $sub_type,
+            'start_date'        => $start_date,
+            'end_date'          => $end_date,
+            'price'             => $price,
+            'status'            => $status,
+        );
+
+        $format = array('%d', '%d', '%d', '%s', '%s', '%s', '%s', '%f', '%s');
+
+        if ($sub_id > 0) {
+            $wpdb->update($table, $data, array('id' => $sub_id), $format, array('%d'));
+            wp_send_json_success('Subscription updated successfully.');
+        } else {
+            $wpdb->insert($table, $data, $format);
+            wp_send_json_success('Subscription created successfully.');
+        }
+    }
+
+    public function ajax_delete_subscription() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        if (!current_user_can('sportedia_manage_subscriptions') && !Sportedia_Roles::is_sys_admin()) {
+            wp_send_json_error('Unauthorized.');
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'sportedia_subscriptions';
+        $sub_id = isset($_POST['sub_id']) ? intval($_POST['sub_id']) : 0;
+
+        if ($sub_id > 0) {
+            $wpdb->delete($table, array('id' => $sub_id), array('%d'));
+            wp_send_json_success('Subscription deleted successfully.');
+        }
+
+        wp_send_json_error('Invalid subscription ID.');
+    }
+}

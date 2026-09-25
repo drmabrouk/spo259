@@ -1,0 +1,45 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+class Sportedia_Page_Generator {
+
+    public static function generate_pages() {
+        $existing_page_id = get_option('sportedia_page_id');
+
+        if ($existing_page_id && get_post($existing_page_id)) {
+            // Page exists, ensure status is publish
+            if (get_post_status($existing_page_id) !== 'publish') {
+                wp_update_post(array(
+                    'ID'          => $existing_page_id,
+                    'post_status' => 'publish'
+                ));
+            }
+            return $existing_page_id;
+        }
+
+        // Check by slug 'sportedia' to prevent duplicate creation
+        $page_by_slug = get_page_by_path('sportedia');
+        if ($page_by_slug) {
+            update_option('sportedia_page_id', $page_by_slug->ID);
+            return $page_by_slug->ID;
+        }
+
+        // Create new page
+        $page_data = array(
+            'post_title'     => 'Sportedia',
+            'post_name'      => 'sportedia',
+            'post_content'   => '<!-- sportedia_app -->',
+            'post_status'    => 'publish',
+            'post_type'      => 'page',
+            'comment_status' => 'closed'
+        );
+
+        $page_id = wp_insert_post($page_data);
+        if ($page_id && !is_wp_error($page_id)) {
+            update_option('sportedia_page_id', $page_id);
+            return $page_id;
+        }
+
+        return false;
+    }
+}

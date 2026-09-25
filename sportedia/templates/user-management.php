@@ -1,0 +1,221 @@
+<?php
+if (!defined('ABSPATH')) exit;
+
+$search    = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
+$role_filter = isset($_GET['role_filter']) ? sanitize_text_field($_GET['role_filter']) : '';
+$branch_filter = isset($_GET['branch_filter']) ? intval($_GET['branch_filter']) : 0;
+
+$usersList = Sportedia_User_Manager::get_users($search, $role_filter, $branch_filter);
+$branchesList = Sportedia_Branch_Manager::get_branches();
+?>
+
+<div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div>
+        <h1 class="sp-page-title">System User Management</h1>
+        <p class="sp-page-subtitle">Manage system users, roles, employee IDs, and multi-branch access.</p>
+    </div>
+    <button class="sp-btn sp-btn-primary" onclick="openUserModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add New User
+    </button>
+</div>
+
+<div class="sp-card" style="padding: 16px;">
+    <form method="get" action="" style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <input type="hidden" name="module" value="users">
+
+        <div style="flex: 1; min-width: 200px;">
+            <input type="text" name="search" class="sp-floating-input" placeholder="Search by name, email, employee ID..." value="<?php echo esc_attr($search); ?>">
+        </div>
+
+        <div style="width: 200px;">
+            <select name="role_filter" class="sp-floating-select">
+                <option value="">All Roles</option>
+                <option value="sportedia_sys_admin" <?php selected($role_filter, 'sportedia_sys_admin'); ?>>System Administrator</option>
+                <option value="sportedia_facility_mgr" <?php selected($role_filter, 'sportedia_facility_mgr'); ?>>Facility Manager</option>
+                <option value="sportedia_ops_mgr" <?php selected($role_filter, 'sportedia_ops_mgr'); ?>>Operations Manager</option>
+                <option value="sportedia_booking_mgr" <?php selected($role_filter, 'sportedia_booking_mgr'); ?>>Booking & Reception Manager</option>
+                <option value="sportedia_coach" <?php selected($role_filter, 'sportedia_coach'); ?>>Coach / Trainer</option>
+                <option value="sportedia_customer" <?php selected($role_filter, 'sportedia_customer'); ?>>Customer / Member</option>
+                <option value="sportedia_finance_mgr" <?php selected($role_filter, 'sportedia_finance_mgr'); ?>>Finance & Accounts Manager</option>
+            </select>
+        </div>
+
+        <div style="width: 200px;">
+            <select name="branch_filter" class="sp-floating-select">
+                <option value="0">All Branches</option>
+                <?php foreach ($branchesList as $b) : ?>
+                    <option value="<?php echo esc_attr($b['id']); ?>" <?php selected($branch_filter, $b['id']); ?>><?php echo esc_html($b['branch_name']); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <button type="submit" class="sp-btn sp-btn-secondary">Filter</button>
+    </form>
+</div>
+
+<div class="sp-table-wrapper">
+    <table class="sp-table">
+        <thead>
+            <tr>
+                <th>Employee ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th style="text-align: right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (!empty($usersList)) : ?>
+                <?php foreach ($usersList as $u) : ?>
+                    <tr>
+                        <td><strong><?php echo esc_html($u['employee_id']); ?></strong></td>
+                        <td><?php echo esc_html($u['name']); ?></td>
+                        <td><?php echo esc_html($u['email']); ?></td>
+                        <td><?php echo esc_html($u['role']); ?></td>
+                        <td>
+                            <span class="sp-badge <?php echo $u['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                                <?php echo esc_html(ucfirst($u['status'])); ?>
+                            </span>
+                        </td>
+                        <td style="text-align: right;">
+                            <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editUser(<?php echo json_encode($u); ?>)'>Edit</button>
+                            <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteUser(<?php echo $u['id']; ?>)">Delete</button>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php else : ?>
+                <tr>
+                    <td colspan="6" style="text-align: center; color: var(--sp-text-muted); padding: 32px;">No system users found.</td>
+                </tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal Dialog for User Create/Edit -->
+<div id="spUserModal" class="sp-modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:2000; align-items:center; justify-content:center;">
+    <div class="sp-card" style="width: 100%; max-width: 540px; margin: 20px;">
+        <h3 id="spUserModalTitle" style="margin-top:0;">Add System User</h3>
+        <form id="spUserForm">
+            <input type="hidden" id="sp_user_id" name="user_id" value="0">
+
+            <div class="sp-form-group">
+                <input type="text" id="sp_employee_id" name="employee_id" class="sp-floating-input" placeholder=" " required>
+                <label for="sp_employee_id" class="sp-floating-label">Employee ID</label>
+            </div>
+
+            <div class="sp-form-group">
+                <input type="text" id="sp_display_name" name="display_name" class="sp-floating-input" placeholder=" " required>
+                <label for="sp_display_name" class="sp-floating-label">Full Name</label>
+            </div>
+
+            <div class="sp-form-group">
+                <input type="email" id="sp_email" name="email" class="sp-floating-input" placeholder=" " required>
+                <label for="sp_email" class="sp-floating-label">Email Address</label>
+            </div>
+
+            <div class="sp-form-group">
+                <select id="sp_role" name="role" class="sp-floating-select" required>
+                    <option value="sportedia_sys_admin">System Administrator</option>
+                    <option value="sportedia_facility_mgr">Facility Manager</option>
+                    <option value="sportedia_ops_mgr">Operations Manager</option>
+                    <option value="sportedia_booking_mgr">Booking & Reception Manager</option>
+                    <option value="sportedia_coach">Coach / Trainer</option>
+                    <option value="sportedia_customer">Customer / Member</option>
+                    <option value="sportedia_finance_mgr">Finance & Accounts Manager</option>
+                </select>
+                <label for="sp_role" class="sp-floating-label">User Role</label>
+            </div>
+
+            <div class="sp-form-group">
+                <select id="sp_status" name="status" class="sp-floating-select">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+                <label for="sp_status" class="sp-floating-label">Account Status</label>
+            </div>
+
+            <div class="sp-form-group">
+                <input type="password" id="sp_password" name="password" class="sp-floating-input" placeholder=" ">
+                <label for="sp_password" class="sp-floating-label">Password (leave blank to keep current)</label>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="font-size: 13px; font-weight: 600; color: var(--sp-text-main); display: block; margin-bottom: 8px;">Assigned Branches (Multi-branch support)</label>
+                <div style="max-height: 120px; overflow-y: auto; border: 1px solid var(--sp-border-color); padding: 10px; border-radius: var(--sp-radius);">
+                    <?php foreach ($branchesList as $b) : ?>
+                        <label style="display: block; font-size: 13px; margin-bottom: 4px;">
+                            <input type="checkbox" name="branch_ids[]" class="sp-branch-checkbox" value="<?php echo esc_attr($b['id']); ?>">
+                            <?php echo esc_html($b['branch_name']); ?>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button type="button" class="sp-btn sp-btn-secondary" onclick="spCloseModal('spUserModal')">Cancel</button>
+                <button type="submit" class="sp-btn sp-btn-primary">Save User</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openUserModal() {
+    jQuery('#spUserModalTitle').text('Add System User');
+    jQuery('#sp_user_id').val('0');
+    jQuery('#spUserForm')[0].reset();
+    jQuery('.sp-branch-checkbox').prop('checked', false);
+    spOpenModal('spUserModal');
+}
+
+function editUser(u) {
+    jQuery('#spUserModalTitle').text('Edit System User');
+    jQuery('#sp_user_id').val(u.id);
+    jQuery('#sp_employee_id').val(u.employee_id);
+    jQuery('#sp_display_name').val(u.name);
+    jQuery('#sp_email').val(u.email);
+    jQuery('#sp_role').val(u.role_key);
+    jQuery('#sp_status').val(u.status);
+    jQuery('#sp_password').val('');
+
+    jQuery('.sp-branch-checkbox').prop('checked', false);
+    if (u.branches && u.branches.length > 0) {
+        u.branches.forEach(function(bId) {
+            jQuery('.sp-branch-checkbox[value="' + bId + '"]').prop('checked', true);
+        });
+    }
+
+    spOpenModal('spUserModal');
+}
+
+function deleteUser(userId) {
+    if (confirm('Are you sure you want to delete this user? The linked WordPress account will also be permanently deleted.')) {
+        jQuery.post(sportedia_vars.ajax_url, {
+            action: 'sportedia_delete_user',
+            nonce: sportedia_vars.nonce,
+            user_id: userId
+        }, function(response) {
+            if (response.success) {
+                location.reload();
+            } else {
+                alert(response.data || 'Failed to delete user.');
+            }
+        });
+    }
+}
+
+jQuery('#spUserForm').on('submit', function(e) {
+    e.preventDefault();
+    var formData = jQuery(this).serialize() + '&action=sportedia_save_user&nonce=' + sportedia_vars.nonce;
+    jQuery.post(sportedia_vars.ajax_url, formData, function(response) {
+        if (response.success) {
+            location.reload();
+        } else {
+            alert(response.data || 'Error saving user.');
+        }
+    });
+});
+</script>
