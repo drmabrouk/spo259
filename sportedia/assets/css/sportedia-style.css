@@ -1,4 +1,4 @@
-/* Sportedia Monochromatic Design System CSS */
+/* Sportedia Monochromatic Design System CSS (Strict LTR & Modern Rounded Radius) */
 
 :root {
   --sp-primary: #000000;
@@ -8,7 +8,7 @@
   --sp-text-muted: #6b7280;
   --sp-border-color: #e5e7eb;
   --sp-border-hover: #d1d5db;
-  --sp-radius: 8px;
+  --sp-radius: 12px;
   --sp-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   --sp-font: 'Google Sans Flex', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --sp-sidebar-width: 260px;
@@ -16,6 +16,11 @@
 
 * {
   box-sizing: border-box;
+}
+
+html, body {
+  direction: ltr !important;
+  text-align: left !important;
 }
 
 body.sportedia-app-body {
@@ -33,6 +38,7 @@ body.sportedia-app-body {
   display: flex;
   min-height: 100vh;
   position: relative;
+  direction: ltr !important;
 }
 
 /* Floating Sidebar Navigation */
@@ -51,6 +57,8 @@ body.sportedia-app-body {
   z-index: 1000;
   padding: 20px 16px;
   overflow-y: auto;
+  direction: ltr !important;
+  text-align: left !important;
 }
 
 .sp-sidebar-brand {
@@ -60,11 +68,12 @@ body.sportedia-app-body {
   padding-bottom: 20px;
   margin-bottom: 20px;
   border-bottom: 1px solid var(--sp-border-color);
+  justify-content: flex-start;
 }
 
 .sp-brand-logo {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   background: #000000;
   color: #ffffff;
   border-radius: var(--sp-radius);
@@ -73,6 +82,7 @@ body.sportedia-app-body {
   justify-content: center;
   font-weight: 700;
   font-size: 18px;
+  flex-shrink: 0;
 }
 
 .sp-brand-name {
@@ -80,6 +90,7 @@ body.sportedia-app-body {
   font-weight: 700;
   color: var(--sp-text-main);
   letter-spacing: -0.5px;
+  text-align: left;
 }
 
 .sp-sidebar-nav {
@@ -92,14 +103,16 @@ body.sportedia-app-body {
 .sp-nav-item {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 12px 14px;
   color: var(--sp-text-muted);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
   border-radius: var(--sp-radius);
   transition: all 0.2s ease;
+  text-align: left;
 }
 
 .sp-nav-item:hover {
@@ -131,10 +144,11 @@ body.sportedia-app-body {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   background-color: var(--sp-bg-main);
   border-radius: var(--sp-radius);
   margin-bottom: 8px;
+  justify-content: flex-start;
 }
 
 .sp-user-avatar {
@@ -148,12 +162,14 @@ body.sportedia-app-body {
   font-weight: 600;
   font-size: 13px;
   color: var(--sp-text-main);
+  flex-shrink: 0;
 }
 
 .sp-user-info {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  text-align: left;
 }
 
 .sp-user-name {
@@ -176,10 +192,13 @@ body.sportedia-app-body {
   padding: 24px 32px 32px 0;
   flex-grow: 1;
   max-width: 1400px;
+  direction: ltr !important;
+  text-align: left !important;
 }
 
 .sp-page-header {
   margin-bottom: 24px;
+  text-align: left !important;
 }
 
 .sp-page-title {
@@ -188,12 +207,14 @@ body.sportedia-app-body {
   margin: 0 0 4px 0;
   color: var(--sp-text-main);
   letter-spacing: -0.5px;
+  text-align: left !important;
 }
 
 .sp-page-subtitle {
   font-size: 14px;
   color: var(--sp-text-muted);
   margin: 0;
+  text-align: left !important;
 }
 
 /* Cards System */
@@ -204,12 +225,14 @@ body.sportedia-app-body {
   box-shadow: var(--sp-shadow);
   padding: 24px;
   margin-bottom: 24px;
+  text-align: left !important;
 }
 
 /* Floating Label Inputs */
 .sp-form-group {
   position: relative;
   margin-bottom: 20px;
+  text-align: left !important;
 }
 
 .sp-floating-input, .sp-floating-select {
@@ -223,6 +246,8 @@ body.sportedia-app-body {
   border-radius: var(--sp-radius);
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  direction: ltr !important;
+  text-align: left !important;
 }
 
 .sp-floating-input:focus, .sp-floating-select:focus {
@@ -241,6 +266,7 @@ body.sportedia-app-body {
   font-size: 14px;
   pointer-events: none;
   transition: all 0.2s ease;
+  direction: ltr !important;
 }
 
 .sp-floating-input:focus ~ .sp-floating-label,
@@ -260,13 +286,15 @@ body.sportedia-app-body {
   border: 1px solid var(--sp-border-color);
   border-radius: var(--sp-radius);
   background: var(--sp-bg-card);
+  direction: ltr !important;
 }
 
 .sp-table {
   width: 100%;
   border-collapse: collapse;
-  text-align: left;
+  text-align: left !important;
   font-size: 14px;
+  direction: ltr !important;
 }
 
 .sp-table th {
@@ -278,12 +306,14 @@ body.sportedia-app-body {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  text-align: left !important;
 }
 
 .sp-table td {
   padding: 14px 16px;
   border-bottom: 1px solid var(--sp-border-color);
   color: var(--sp-text-main);
+  text-align: left !important;
 }
 
 .sp-table tr:last-child td {
@@ -334,6 +364,7 @@ body.sportedia-app-body {
   transition: all 0.2s ease;
   text-decoration: none;
   font-family: var(--sp-font);
+  direction: ltr !important;
 }
 
 .sp-btn-primary {
