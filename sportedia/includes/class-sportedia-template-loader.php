@@ -24,10 +24,16 @@ class Sportedia_Template_Loader {
 
     public function load_sportedia_template($template) {
         if (self::is_verify_page()) {
+            if (!is_user_logged_in()) {
+                return SPORTEDIA_PLUGIN_DIR . 'templates/login-form.php';
+            }
             return SPORTEDIA_PLUGIN_DIR . 'templates/verification-system.php';
         }
 
         if (self::is_scan_page()) {
+            if (!is_user_logged_in()) {
+                return SPORTEDIA_PLUGIN_DIR . 'templates/login-form.php';
+            }
             return SPORTEDIA_PLUGIN_DIR . 'templates/kiosk-attendance.php';
         }
 
