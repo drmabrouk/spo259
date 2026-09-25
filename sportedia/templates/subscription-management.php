@@ -9,6 +9,16 @@ $subscriptions = Sportedia_Subscription_Manager::get_subscriptions($search, $bra
 $branchesList  = Sportedia_Branch_Manager::get_branches();
 $usersList     = Sportedia_User_Manager::get_users();
 $programsList  = Sportedia_Program_Manager::get_programs();
+
+$curr_u = wp_get_current_user();
+$admin_roles = array('sportedia_sys_admin', 'sportedia_general_mgr', 'sportedia_facility_mgr', 'sportedia_ops_mgr', 'sportedia_finance_mgr', 'administrator');
+$can_view_session_count = false;
+foreach ((array)$curr_u->roles as $r) {
+    if (in_array($r, $admin_roles, true) || current_user_can('manage_options')) {
+        $can_view_session_count = true;
+        break;
+    }
+}
 ?>
 
 <div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
@@ -58,7 +68,7 @@ $programsList  = Sportedia_Program_Manager::get_programs();
             <tr>
                 <th>Member</th>
                 <th>Plan Name</th>
-                <th>Sessions Used</th>
+                <?php if ($can_view_session_count) : ?><th>Sessions Used</th><?php endif; ?>
                 <th>Type</th>
                 <th>Dates</th>
                 <th>Price</th>
@@ -75,11 +85,13 @@ $programsList  = Sportedia_Program_Manager::get_programs();
                             <span style="font-size: 11px; color: var(--sp-text-muted);"><?php echo esc_html($s['employee_id']); ?></span>
                         </td>
                         <td><?php echo esc_html($s['plan_name']); ?></td>
-                        <td>
-                            <span class="sp-badge">
-                                <?php echo esc_html(intval($s['sessions_used'] ?? 0)); ?> / <?php echo esc_html(intval($s['sessions_count'] ?? 12)); ?>
-                            </span>
-                        </td>
+                        <?php if ($can_view_session_count) : ?>
+                            <td>
+                                <span class="sp-badge">
+                                    <?php echo esc_html(intval($s['sessions_used'] ?? 0)); ?> / <?php echo esc_html(intval($s['sessions_count'] ?? 12)); ?>
+                                </span>
+                            </td>
+                        <?php endif; ?>
                         <td><?php echo esc_html(ucfirst($s['subscription_type'])); ?></td>
                         <td>
                             <span style="font-size: 12px; display: block;"><?php echo esc_html($s['start_date']); ?> &rarr; <?php echo esc_html($s['end_date']); ?></span>

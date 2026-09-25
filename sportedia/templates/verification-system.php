@@ -1,10 +1,31 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+if (!is_user_logged_in()) {
+    $app_page_id = get_option('sportedia_page_id');
+    $redirect_url = $app_page_id ? get_permalink($app_page_id) : home_url('/sportedia/');
+    wp_safe_redirect($redirect_url);
+    exit;
+}
+
+$current_user = wp_get_current_user();
+$allowed_roles = array('sportedia_sys_admin', 'sportedia_general_mgr', 'sportedia_facility_mgr', 'administrator');
+$user_roles = (array) $current_user->roles;
+$has_access = false;
+foreach ($user_roles as $r) {
+    if (in_array($r, $allowed_roles, true) || current_user_can('manage_options')) {
+        $has_access = true;
+        break;
+    }
+}
+
+if (!$has_access) {
+    wp_die('Access Denied. Access to the Verification System QR/Barcode interface is restricted to System Administrators, General Managers, and Facility Managers.');
+}
+
 $initial_token = Sportedia_Attendance_Manager::generate_attendance_qr_token();
 $ajax_url      = admin_url('admin-ajax.php');
 $nonce         = wp_create_nonce('sportedia_nonce');
-$current_user  = wp_get_current_user();
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
@@ -339,6 +360,12 @@ function updateCode() {
 }
 
 generateBarcodeSVG(currentToken);
+
+$(document).ready(function() {
+    if (window.innerWidth <= 768) {
+        switchVerifyTab('member');
+    }
+});
 
 setInterval(function() {
     var now = Date.now();
