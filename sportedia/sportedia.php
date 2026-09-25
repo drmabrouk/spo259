@@ -20,6 +20,7 @@ define('SPORTEDIA_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 // Require Core Files
 require_once SPORTEDIA_PLUGIN_DIR . 'includes/class-sportedia-db.php';
+require_once SPORTEDIA_PLUGIN_DIR . 'includes/class-sportedia-finance.php';
 require_once SPORTEDIA_PLUGIN_DIR . 'includes/class-sportedia-activator.php';
 require_once SPORTEDIA_PLUGIN_DIR . 'includes/class-sportedia-page-generator.php';
 require_once SPORTEDIA_PLUGIN_DIR . 'includes/class-sportedia-roles.php';

@@ -16,8 +16,19 @@ class Sportedia_Subscription_Manager {
         add_action('wp_ajax_sportedia_delete_subscription', array($this, 'ajax_delete_subscription'));
     }
 
+    public static function auto_update_expired_subscriptions() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'sportedia_subscriptions';
+        $today = date('Y-m-d');
+        $wpdb->query($wpdb->prepare(
+            "UPDATE $table SET status = 'expired' WHERE status = 'active' AND end_date < %s",
+            $today
+        ));
+    }
+
     public static function get_subscriptions($search = '', $branch_id = 0, $status = '') {
         global $wpdb;
+        self::auto_update_expired_subscriptions();
         $table = $wpdb->prefix . 'sportedia_subscriptions';
 
         $where = array('1=1');

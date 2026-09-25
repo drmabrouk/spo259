@@ -1,12 +1,24 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-$site_name     = Sportedia_Settings_Manager::get_setting('site_name', 'Sportedia Online');
-$currency      = Sportedia_Settings_Manager::get_setting('currency', 'AED');
-$support_email = Sportedia_Settings_Manager::get_setting('support_email', 'support@sportedia.online');
-$session_pack  = Sportedia_Settings_Manager::get_setting('session_pack_limit', '10');
-$default_vat   = Sportedia_Settings_Manager::get_setting('default_vat_rate', '5');
-$active_tab    = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
+$site_name          = Sportedia_Settings_Manager::get_setting('site_name', 'Sportedia Online');
+$currency           = Sportedia_Settings_Manager::get_setting('currency', 'AED');
+$support_email      = Sportedia_Settings_Manager::get_setting('support_email', 'support@sportedia.online');
+$session_pack       = Sportedia_Settings_Manager::get_setting('session_pack_limit', '10');
+$default_vat        = Sportedia_Settings_Manager::get_setting('default_vat_rate', '5');
+$default_user_role  = Sportedia_Settings_Manager::get_setting('default_user_role', 'sportedia_customer');
+$branch_hours       = Sportedia_Settings_Manager::get_setting('branch_operating_hours', '06:00 - 23:00');
+$max_branches       = Sportedia_Settings_Manager::get_setting('max_branches_per_mgr', '5');
+$default_capacity   = Sportedia_Settings_Manager::get_setting('default_program_capacity', '20');
+$allow_overbook     = Sportedia_Settings_Manager::get_setting('allow_overbooking', 'no');
+$grace_days         = Sportedia_Settings_Manager::get_setting('subscription_grace_days', '3');
+$enable_renewal     = Sportedia_Settings_Manager::get_setting('enable_renewal_reminders', 'yes');
+$default_att_status = Sportedia_Settings_Manager::get_setting('default_attendance_status', 'present');
+$allow_past_att     = Sportedia_Settings_Manager::get_setting('allow_past_attendance', 'yes');
+$report_email       = Sportedia_Settings_Manager::get_setting('report_summary_email', 'reports@sportedia.online');
+$export_format      = Sportedia_Settings_Manager::get_setting('default_export_format', 'csv');
+
+$active_tab         = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
 
 $app_url = get_permalink(get_option('sportedia_page_id'));
 
@@ -53,10 +65,75 @@ $tabs = array(
             <h3 style="margin-top:0;">User & Role Configuration</h3>
             <div class="sp-form-group">
                 <select id="setting_default_role" name="settings[default_user_role]" class="sp-floating-select">
-                    <option value="sportedia_customer">Customer / Member</option>
-                    <option value="sportedia_coach">Coach / Trainer</option>
+                    <option value="sportedia_customer" <?php selected($default_user_role, 'sportedia_customer'); ?>>Customer / Member</option>
+                    <option value="sportedia_coach" <?php selected($default_user_role, 'sportedia_coach'); ?>>Coach / Trainer</option>
                 </select>
                 <label for="setting_default_role" class="sp-floating-label">Default New Account Role</label>
+            </div>
+        <?php elseif ($active_tab === 'branches') : ?>
+            <h3 style="margin-top:0;">Branch Defaults & Operating Settings</h3>
+            <div class="sp-form-group">
+                <input type="text" id="setting_branch_hours" name="settings[branch_operating_hours]" class="sp-floating-input" value="<?php echo esc_attr($branch_hours); ?>">
+                <label for="setting_branch_hours" class="sp-floating-label">Standard Operating Hours</label>
+            </div>
+            <div class="sp-form-group">
+                <input type="number" id="setting_max_branches" name="settings[max_branches_per_mgr]" class="sp-floating-input" value="<?php echo esc_attr($max_branches); ?>">
+                <label for="setting_max_branches" class="sp-floating-label">Max Branches per Facility Manager</label>
+            </div>
+        <?php elseif ($active_tab === 'programs') : ?>
+            <h3 style="margin-top:0;">Program & Session Configuration</h3>
+            <div class="sp-form-group">
+                <input type="number" id="setting_default_capacity" name="settings[default_program_capacity]" class="sp-floating-input" value="<?php echo esc_attr($default_capacity); ?>">
+                <label for="setting_default_capacity" class="sp-floating-label">Default Program Capacity Limit</label>
+            </div>
+            <div class="sp-form-group">
+                <select id="setting_allow_overbooking" name="settings[allow_overbooking]" class="sp-floating-select">
+                    <option value="no" <?php selected($allow_overbook, 'no'); ?>>No (Strict Capacity Limit)</option>
+                    <option value="yes" <?php selected($allow_overbook, 'yes'); ?>>Yes (Allow Overbooking)</option>
+                </select>
+                <label for="setting_allow_overbooking" class="sp-floating-label">Allow Overbooking</label>
+            </div>
+        <?php elseif ($active_tab === 'subscriptions') : ?>
+            <h3 style="margin-top:0;">Subscription & Membership Rules</h3>
+            <div class="sp-form-group">
+                <input type="number" id="setting_grace_days" name="settings[subscription_grace_days]" class="sp-floating-input" value="<?php echo esc_attr($grace_days); ?>">
+                <label for="setting_grace_days" class="sp-floating-label">Expiration Grace Period (Days)</label>
+            </div>
+            <div class="sp-form-group">
+                <select id="setting_enable_renewal" name="settings[enable_renewal_reminders]" class="sp-floating-select">
+                    <option value="yes" <?php selected($enable_renewal, 'yes'); ?>>Enabled</option>
+                    <option value="no" <?php selected($enable_renewal, 'no'); ?>>Disabled</option>
+                </select>
+                <label for="setting_enable_renewal" class="sp-floating-label">Renewal Notifications</label>
+            </div>
+        <?php elseif ($active_tab === 'attendance') : ?>
+            <h3 style="margin-top:0;">Attendance Tracking Policy</h3>
+            <div class="sp-form-group">
+                <select id="setting_default_att_status" name="settings[default_attendance_status]" class="sp-floating-select">
+                    <option value="present" <?php selected($default_att_status, 'present'); ?>>Present</option>
+                    <option value="late" <?php selected($default_att_status, 'late'); ?>>Late</option>
+                    <option value="absent" <?php selected($default_att_status, 'absent'); ?>>Absent</option>
+                </select>
+                <label for="setting_default_att_status" class="sp-floating-label">Default Check-in Status</label>
+            </div>
+            <div class="sp-form-group">
+                <select id="setting_allow_past_att" name="settings[allow_past_attendance]" class="sp-floating-select">
+                    <option value="yes" <?php selected($allow_past_att, 'yes'); ?>>Allowed</option>
+                    <option value="no" <?php selected($allow_past_att, 'no'); ?>>Current Day Only</option>
+                </select>
+                <label for="setting_allow_past_att" class="sp-floating-label">Retroactive Attendance Modification</label>
+            </div>
+        <?php elseif ($active_tab === 'reporting') : ?>
+            <h3 style="margin-top:0;">Reporting & Export Options</h3>
+            <div class="sp-form-group">
+                <input type="email" id="setting_report_email" name="settings[report_summary_email]" class="sp-floating-input" value="<?php echo esc_attr($report_email); ?>">
+                <label for="setting_report_email" class="sp-floating-label">Daily Report Summary Email</label>
+            </div>
+            <div class="sp-form-group">
+                <select id="setting_export_format" name="settings[default_export_format]" class="sp-floating-select">
+                    <option value="csv" <?php selected($export_format, 'csv'); ?>>CSV Format</option>
+                </select>
+                <label for="setting_export_format" class="sp-floating-label">Default Export Data Format</label>
             </div>
         <?php elseif ($active_tab === 'system') : ?>
             <h3 style="margin-top:0;">System Configuration</h3>
@@ -71,13 +148,6 @@ $tabs = array(
             <div class="sp-form-group">
                 <input type="number" id="setting_vat" name="settings[default_vat_rate]" class="sp-floating-input" value="<?php echo esc_attr($default_vat); ?>">
                 <label for="setting_vat" class="sp-floating-label">Standard VAT Rate (%)</label>
-            </div>
-        <?php else : ?>
-            <h3 style="margin-top:0;"><?php echo esc_html($tabs[$active_tab]); ?></h3>
-            <p style="color: var(--sp-text-muted); font-size: 14px;">Operational parameters for this module are active under default system policy.</p>
-            <div class="sp-form-group">
-                <input type="number" id="setting_session_pack" name="settings[session_pack_limit]" class="sp-floating-input" value="<?php echo esc_attr($session_pack); ?>">
-                <label for="setting_session_pack" class="sp-floating-label">Default Capacity / Session Limit</label>
             </div>
         <?php endif; ?>
 

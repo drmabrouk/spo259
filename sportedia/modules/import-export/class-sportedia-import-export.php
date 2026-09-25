@@ -81,6 +81,17 @@ class Sportedia_Import_Export {
                 $email        = sanitize_email($row[2]);
                 $role         = sanitize_text_field($row[3]);
 
+                if (!empty($employee_id)) {
+                    $existing_emp = get_users(array(
+                        'meta_key'   => 'sportedia_employee_id',
+                        'meta_value' => $employee_id,
+                        'number'     => 1,
+                    ));
+                    if (!empty($existing_emp)) {
+                        continue;
+                    }
+                }
+
                 if (!empty($email) && !email_exists($email)) {
                     $username = strtolower(str_replace(' ', '', $employee_id));
                     if (empty($username) || username_exists($username)) {

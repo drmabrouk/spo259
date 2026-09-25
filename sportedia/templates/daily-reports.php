@@ -15,10 +15,18 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
         <h1 class="sp-page-title">Daily Reports & Data Operations</h1>
         <p class="sp-page-subtitle">Analyze daily attendance, new registrations, operational performance, and manage CSV export/import.</p>
     </div>
-    <div style="display: flex; gap: 10px;">
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
         <a href="<?php echo esc_url(admin_url('admin-ajax.php?action=sportedia_export_csv&export_type=users&nonce=' . $export_nonce)); ?>" class="sp-btn sp-btn-secondary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Export Users CSV
+            Users CSV
+        </a>
+        <a href="<?php echo esc_url(admin_url('admin-ajax.php?action=sportedia_export_csv&export_type=subscriptions&nonce=' . $export_nonce)); ?>" class="sp-btn sp-btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Subscriptions CSV
+        </a>
+        <a href="<?php echo esc_url(admin_url('admin-ajax.php?action=sportedia_export_csv&export_type=branches&nonce=' . $export_nonce)); ?>" class="sp-btn sp-btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Branches CSV
         </a>
         <button class="sp-btn sp-btn-primary" onclick="openImportModal()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -66,7 +74,7 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
 
     <div class="sp-card" style="margin-bottom:0;">
         <div style="font-size: 13px; color: var(--sp-text-muted); font-weight: 500;">Day Revenue</div>
-        <div style="font-size: 32px; font-weight: 700; margin-top: 8px; color: var(--sp-text-main);">$<?php echo esc_html(number_format($reportData['revenue'], 2)); ?></div>
+        <div style="font-size: 32px; font-weight: 700; margin-top: 8px; color: var(--sp-text-main);"><?php echo esc_html(Sportedia_Finance::format_price($reportData['revenue'])); ?></div>
     </div>
 </div>
 

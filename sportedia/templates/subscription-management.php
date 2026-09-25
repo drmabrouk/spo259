@@ -78,7 +78,7 @@ $programsList  = Sportedia_Program_Manager::get_programs();
                         <td>
                             <span style="font-size: 12px; display: block;"><?php echo esc_html($s['start_date']); ?> &rarr; <?php echo esc_html($s['end_date']); ?></span>
                         </td>
-                        <td>$<?php echo esc_html(number_format($s['price'], 2)); ?></td>
+                        <td><?php echo esc_html(Sportedia_Finance::format_price($s['price'])); ?></td>
                         <td>
                             <span class="sp-badge <?php echo $s['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
                                 <?php echo esc_html(ucfirst($s['status'])); ?>
@@ -168,7 +168,7 @@ $programsList  = Sportedia_Program_Manager::get_programs();
             <div style="display: flex; gap: 12px;">
                 <div class="sp-form-group" style="flex: 1;">
                     <input type="number" step="0.01" id="sp_sub_price" name="price" class="sp-floating-input" placeholder=" " value="0.00">
-                    <label for="sp_sub_price" class="sp-floating-label">Price ($)</label>
+                    <label for="sp_sub_price" class="sp-floating-label">Price (AED)</label>
                 </div>
 
                 <div class="sp-form-group" style="flex: 1;">

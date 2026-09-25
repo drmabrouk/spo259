@@ -15,10 +15,16 @@ jQuery(document).ready(function ($) {
     });
   }
 
+  window.spUpdateFloatingLabels = updateFloatingLabels;
+
   updateFloatingLabels();
 
   $(document).on('change input blur focus', '.sp-floating-input, .sp-floating-select', function () {
     updateFloatingLabels();
+  });
+
+  $(document).on('reset', 'form', function () {
+    setTimeout(updateFloatingLabels, 50);
   });
 
   // Reusable Modal Open/Close Helpers
