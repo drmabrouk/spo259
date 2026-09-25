@@ -52,7 +52,7 @@ class Sportedia_Coach_Manager {
 
             // Get total verified completed sessions conducted by coach
             $completed_sessions = $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM $att_table a
+                "SELECT COUNT(DISTINCT a.id) FROM $att_table a
                  INNER JOIN $subs_table s ON a.program_id = s.program_id AND a.user_id = s.user_id
                  WHERE s.coach_id = %d AND a.status = 'present'",
                 $coach_id
@@ -79,7 +79,7 @@ class Sportedia_Coach_Manager {
         $att_table  = $wpdb->prefix . 'sportedia_attendance';
 
         $sql = $wpdb->prepare(
-            "SELECT a.*, s.plan_name FROM $att_table a
+            "SELECT DISTINCT a.*, s.plan_name FROM $att_table a
              INNER JOIN $subs_table s ON a.program_id = s.program_id AND a.user_id = s.user_id
              WHERE s.coach_id = %d ORDER BY a.id DESC LIMIT 50",
             $coach_id

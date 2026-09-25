@@ -9,7 +9,15 @@ if (!is_user_logged_in()) {
 }
 
 $current_user = wp_get_current_user();
-$allowed_roles = array('sportedia_sys_admin', 'sportedia_general_mgr', 'sportedia_facility_mgr', 'administrator');
+$allowed_roles = array(
+    'sportedia_sys_admin',
+    'sportedia_general_mgr',
+    'sportedia_facility_mgr',
+    'sportedia_ops_mgr',
+    'sportedia_booking_mgr',
+    'sportedia_coach',
+    'administrator'
+);
 $user_roles = (array) $current_user->roles;
 $has_access = false;
 foreach ($user_roles as $r) {
@@ -20,7 +28,7 @@ foreach ($user_roles as $r) {
 }
 
 if (!$has_access) {
-    wp_die('Access Denied. Access to the Verification System QR/Barcode interface is restricted to System Administrators, General Managers, and Facility Managers.');
+    wp_die('Access Denied. Access to the Verification System is restricted to authorized Sportedia staff, managers, and coaches.');
 }
 
 $initial_token = Sportedia_Attendance_Manager::generate_attendance_qr_token();
@@ -293,12 +301,13 @@ $nonce         = wp_create_nonce('sportedia_nonce');
         </form>
 
         <div id="spVerifySuccessAlert" class="sp-alert sp-alert-success">
-            <div style="font-weight: 700; font-size: 15px; margin-bottom: 4px;" id="spResMemberName">Member Name</div>
-            <div><strong>Member ID:</strong> <span id="spResMemberId">MEM-0000</span></div>
+            <div style="font-weight: 700; font-size: 16px; margin-bottom: 6px; border-bottom: 1px solid #bbf7d0; padding-bottom: 4px;" id="spResMemberName">Member Name</div>
+            <div><strong>Member ID:</strong> <span id="spResMemberId" style="font-family: monospace;">MEM-0000</span></div>
+            <div><strong>Subscription / Ref:</strong> <span id="spResSubId" style="font-family: monospace;">SUB-0000</span></div>
             <div><strong>Plan:</strong> <span id="spResPlanName">Gold Membership</span></div>
-            <div><strong>Action:</strong> 1 Session Deducted</div>
-            <div style="margin-top: 8px; font-weight: 700; font-size: 14px; border-top: 1px solid #bbf7d0; pt-6px;">
-                Remaining Sessions: <span id="spResRemaining">11</span>
+            <div><strong>Action:</strong> 1 Session / Class Deducted</div>
+            <div style="margin-top: 8px; font-weight: 700; font-size: 15px; border-top: 1px solid #bbf7d0; padding-top: 6px;">
+                Remaining Sessions: <span id="spResRemaining" style="font-size: 18px; color: #15803d;">11</span>
             </div>
         </div>
 
@@ -355,7 +364,7 @@ function startCameraScan() {
             var videoElem = document.getElementById('spCameraPreview');
             videoElem.srcObject = stream;
             videoElem.play();
-            $('#spCameraStatus').text('Camera active. Place barcode or QR code in view.');
+            $('#spCameraStatus').text('Camera active. Place membership barcode or QR code in view.');
 
             if ('BarcodeDetector' in window) {
                 var detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'qr_code', 'ean_13', 'upc_a'] });
@@ -372,7 +381,7 @@ function startCameraScan() {
                     }
                 }, 300);
             } else {
-                $('#spCameraStatus').text('Camera active. (Hardware scanner or input below available)');
+                $('#spCameraStatus').text('Camera active. (Hardware barcode reader or manual entry active)');
             }
         })
         .catch(function(err) {
@@ -393,15 +402,16 @@ function stopCameraScan() {
 }
 
 function processScannedBarcode(code) {
+    var cleanCode = code.replace(/^\*+|\*+$/g, '').trim();
     var now = Date.now();
-    if (isProcessingScan || (code === lastScannedCode && (now - lastScanTime) < 3000)) {
+    if (isProcessingScan || (cleanCode === lastScannedCode && (now - lastScanTime) < 3000)) {
         return;
     }
     isProcessingScan = true;
-    lastScannedCode = code;
+    lastScannedCode = cleanCode;
     lastScanTime = now;
 
-    $('#sp_member_barcode').val(code);
+    $('#sp_member_barcode').val(cleanCode);
     $('#spMemberVerifyForm').trigger('submit');
     setTimeout(function() { isProcessingScan = false; }, 2000);
 }
@@ -478,6 +488,7 @@ $('#spMemberVerifyForm').on('submit', function(e) {
                 var d = res.data;
                 $('#spResMemberName').text(d.member_name);
                 $('#spResMemberId').text(d.member_id);
+                $('#spResSubId').text(d.invoice_number || ('SUB-' + d.subscription_id));
                 $('#spResPlanName').text(d.plan_name);
                 $('#spResRemaining').text(d.sessions_remaining);
                 $('#spVerifySuccessAlert').slideDown(200);

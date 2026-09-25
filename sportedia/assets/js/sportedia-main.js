@@ -29,17 +29,17 @@ jQuery(document).ready(function ($) {
 
   // Reusable Modal Open/Close Helpers
   window.spOpenModal = function (modalId) {
-    $('#' + modalId).css('display', 'flex').addClass('active');
+    $('#' + modalId).css('display', 'flex').addClass('active open');
     updateFloatingLabels();
   };
 
   window.spCloseModal = function (modalId) {
-    $('#' + modalId).css('display', 'none').removeClass('active');
+    $('#' + modalId).css('display', 'none').removeClass('active open');
   };
 
-  $(document).on('click', '.sp-modal-close, .sp-modal-overlay', function (e) {
+  $(document).on('click', '.sp-modal-close, .sp-modal-overlay, .sp-modal', function (e) {
     if (e.target === this) {
-      $(this).closest('.sp-modal-overlay').css('display', 'none').removeClass('active');
+      $(this).css('display', 'none').removeClass('active open');
     }
   });
 
