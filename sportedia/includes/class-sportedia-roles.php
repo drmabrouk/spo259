@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) exit;
 class Sportedia_Roles {
 
     public const ROLE_SYS_ADMIN      = 'sportedia_sys_admin';
+    public const ROLE_GENERAL_MGR    = 'sportedia_general_mgr';
     public const ROLE_FACILITY_MGR   = 'sportedia_facility_mgr';
     public const ROLE_OPERATIONS_MGR = 'sportedia_ops_mgr';
     public const ROLE_BOOKING_MGR    = 'sportedia_booking_mgr';
@@ -16,7 +17,6 @@ class Sportedia_Roles {
     }
 
     private static function register_roles() {
-        // Capabilities map
         $roles_config = array(
             self::ROLE_SYS_ADMIN => array(
                 'display_name' => 'System Administrator',
@@ -30,6 +30,20 @@ class Sportedia_Roles {
                     'sportedia_manage_attendance' => true,
                     'sportedia_view_reports' => true,
                     'sportedia_manage_settings' => true,
+                    'sportedia_import_export' => true,
+                )
+            ),
+            self::ROLE_GENERAL_MGR => array(
+                'display_name' => 'General Manager',
+                'caps' => array(
+                    'read' => true,
+                    'sportedia_access' => true,
+                    'sportedia_manage_users' => true,
+                    'sportedia_manage_branches' => true,
+                    'sportedia_manage_subscriptions' => true,
+                    'sportedia_manage_programs' => true,
+                    'sportedia_manage_attendance' => true,
+                    'sportedia_view_reports' => true,
                     'sportedia_import_export' => true,
                 )
             ),
@@ -106,26 +120,6 @@ class Sportedia_Roles {
         }
     }
 
-    public static function is_sportedia_user($user = null) {
-        if (!$user) {
-            $user = wp_get_current_user();
-        }
-        if (!$user || !$user->exists()) return false;
-
-        $sportedia_roles = array(
-            self::ROLE_SYS_ADMIN,
-            self::ROLE_FACILITY_MGR,
-            self::ROLE_OPERATIONS_MGR,
-            self::ROLE_BOOKING_MGR,
-            self::ROLE_COACH,
-            self::ROLE_CUSTOMER,
-            self::ROLE_FINANCE_MGR,
-        );
-
-        $user_roles = (array) $user->roles;
-        return (bool) array_intersect($sportedia_roles, $user_roles) || user_can($user, 'sportedia_access');
-    }
-
     public static function is_sys_admin($user = null) {
         if (!$user) {
             $user = wp_get_current_user();
@@ -133,5 +127,29 @@ class Sportedia_Roles {
         if (!$user || !$user->exists()) return false;
 
         return in_array(self::ROLE_SYS_ADMIN, (array) $user->roles, true) || user_can($user, 'manage_options');
+    }
+
+    public static function is_general_mgr($user = null) {
+        if (!$user) {
+            $user = wp_get_current_user();
+        }
+        if (!$user || !$user->exists()) return false;
+
+        return in_array(self::ROLE_GENERAL_MGR, (array) $user->roles, true) || self::is_sys_admin($user);
+    }
+
+    public static function get_allowed_branch_ids($user_id = 0) {
+        if ($user_id <= 0) {
+            $user_id = get_current_user_id();
+        }
+
+        $user = get_userdata($user_id);
+        if (!$user) return array();
+
+        if (self::is_sys_admin($user) || self::is_general_mgr($user)) {
+            return array('all');
+        }
+
+        return Sportedia_User_Manager::get_user_branches($user_id);
     }
 }
