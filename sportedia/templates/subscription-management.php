@@ -58,6 +58,7 @@ $programsList  = Sportedia_Program_Manager::get_programs();
             <tr>
                 <th>Member</th>
                 <th>Plan Name</th>
+                <th>Sessions Used</th>
                 <th>Type</th>
                 <th>Dates</th>
                 <th>Price</th>
@@ -74,6 +75,11 @@ $programsList  = Sportedia_Program_Manager::get_programs();
                             <span style="font-size: 11px; color: var(--sp-text-muted);"><?php echo esc_html($s['employee_id']); ?></span>
                         </td>
                         <td><?php echo esc_html($s['plan_name']); ?></td>
+                        <td>
+                            <span class="sp-badge">
+                                <?php echo esc_html(intval($s['sessions_used'] ?? 0)); ?> / <?php echo esc_html(intval($s['sessions_count'] ?? 12)); ?>
+                            </span>
+                        </td>
                         <td><?php echo esc_html(ucfirst($s['subscription_type'])); ?></td>
                         <td>
                             <span style="font-size: 12px; display: block;"><?php echo esc_html($s['start_date']); ?> &rarr; <?php echo esc_html($s['end_date']); ?></span>
