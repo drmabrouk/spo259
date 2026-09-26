@@ -5,8 +5,9 @@ $search    = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
 $role_filter = isset($_GET['role_filter']) ? sanitize_text_field($_GET['role_filter']) : '';
 $branch_filter = isset($_GET['branch_filter']) ? intval($_GET['branch_filter']) : 0;
 
-$usersList = Sportedia_User_Manager::get_users($search, $role_filter, $branch_filter);
-$branchesList = Sportedia_Branch_Manager::get_branches();
+$usersList         = Sportedia_User_Manager::get_users($search, $role_filter, $branch_filter);
+$branchesList      = Sportedia_Branch_Manager::get_branches();
+$nationalitiesList = Sportedia_User_Manager::get_nationalities();
 ?>
 
 <div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
@@ -87,8 +88,8 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
                                 <strong><?php echo esc_html($u['role']); ?></strong>
                             </div>
                             <div>
-                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">MOBILE</span>
-                                <span><?php echo esc_html($u['phone'] ? $u['phone'] : 'N/A'); ?></span>
+                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">NATIONALITY</span>
+                                <span><?php echo esc_html($u['nationality'] ? $u['nationality'] : 'N/A'); ?></span>
                             </div>
                         </div>
 
@@ -153,6 +154,27 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
                 <div class="sp-form-group">
                     <input type="email" id="sp_email" name="email" class="sp-floating-input" placeholder=" " required>
                     <label for="sp_email" class="sp-floating-label">Email Address *</label>
+                </div>
+            </div>
+
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
+                    <select id="sp_nationality" name="nationality" class="sp-floating-select">
+                        <option value="">Select Nationality</option>
+                        <?php foreach ($nationalitiesList as $nat) : ?>
+                            <option value="<?php echo esc_attr($nat); ?>"><?php echo esc_html($nat); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <label for="sp_nationality" class="sp-floating-label">Nationality</label>
+                </div>
+
+                <div class="sp-form-group">
+                    <select id="sp_gender" name="gender" class="sp-floating-select">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <label for="sp_gender" class="sp-floating-label">Gender</label>
                 </div>
             </div>
 
@@ -243,6 +265,7 @@ $branchesList = Sportedia_Branch_Manager::get_branches();
                 <div class="sp-form-group">
                     <select id="sp_role" name="role" class="sp-floating-select" required>
                         <option value="sportedia_sys_admin">System Administrator</option>
+                        <option value="sportedia_general_mgr">General Manager</option>
                         <option value="sportedia_facility_mgr">Facility Manager</option>
                         <option value="sportedia_ops_mgr">Operations Manager</option>
                         <option value="sportedia_booking_mgr">Booking & Reception Manager</option>
@@ -306,6 +329,8 @@ function editUser(u) {
     jQuery('#sp_phone').val(u.phone || '');
     jQuery('#sp_display_name').val(u.name);
     jQuery('#sp_email').val(u.email);
+    jQuery('#sp_nationality').val(u.nationality || '');
+    jQuery('#sp_gender').val(u.gender || 'Male');
     jQuery('#sp_height').val(u.height || '');
     jQuery('#sp_weight').val(u.weight || '');
     jQuery('#sp_health_status').val(u.health_status || 'Fit & Healthy');

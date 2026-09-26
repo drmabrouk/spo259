@@ -44,6 +44,7 @@ class Sportedia_Roles {
                     'sportedia_manage_programs' => true,
                     'sportedia_manage_attendance' => true,
                     'sportedia_view_reports' => true,
+                    'sportedia_manage_settings' => true,
                     'sportedia_import_export' => true,
                 )
             ),

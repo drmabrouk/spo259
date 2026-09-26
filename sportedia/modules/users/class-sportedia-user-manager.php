@@ -11,6 +11,21 @@ class Sportedia_User_Manager {
         return self::$instance;
     }
 
+    public static function get_nationalities() {
+        return array(
+            'Emirati', 'Egyptian', 'Saudi', 'Jordanian', 'Lebanese', 'Syrian',
+            'Indian', 'Pakistani', 'Filipino', 'British', 'American', 'Canadian',
+            'Australian', 'French', 'German', 'Italian', 'Spanish', 'Russian',
+            'Chinese', 'Japanese', 'South Korean', 'Moroccan', 'Sudanese',
+            'Omani', 'Kuwaiti', 'Qatari', 'Bahraini', 'Iraqi', 'Yemeni',
+            'Algerian', 'Tunisian', 'Palestine', 'Turkish', 'South African',
+            'Nigerian', 'Kenyan', 'Ghanaian', 'Iranian', 'Afghan', 'Bangladeshi',
+            'Sri Lankan', 'Nepalese', 'Indonesian', 'Malaysian', 'Vietnamese',
+            'Brazilian', 'Argentine', 'Mexican', 'Colombian', 'Dutch',
+            'Swedish', 'Swiss', 'Polish', 'Greek', 'Ukrainian'
+        );
+    }
+
     public function __construct() {
         add_action('wp_ajax_sportedia_save_user', array($this, 'ajax_save_user'));
         add_action('wp_ajax_sportedia_delete_user', array($this, 'ajax_delete_user'));
@@ -85,6 +100,10 @@ class Sportedia_User_Manager {
                 'name'          => $u->display_name,
                 'email'         => $u->user_email,
                 'phone'         => get_user_meta($user_id, 'sportedia_phone', true),
+                'nationality'   => get_user_meta($user_id, 'sportedia_nationality', true),
+                'gender'        => get_user_meta($user_id, 'sportedia_gender', true),
+                'address'       => get_user_meta($user_id, 'sportedia_address', true),
+                'emirate'       => get_user_meta($user_id, 'sportedia_emirate', true),
                 'height'        => get_user_meta($user_id, 'sportedia_height', true),
                 'weight'        => get_user_meta($user_id, 'sportedia_weight', true),
                 'health_status' => get_user_meta($user_id, 'sportedia_health_status', true),
@@ -190,6 +209,10 @@ class Sportedia_User_Manager {
         update_user_meta($user_id, 'sportedia_employee_id', $employee_id);
         update_user_meta($user_id, 'sportedia_status', $status);
         if (isset($_POST['phone'])) update_user_meta($user_id, 'sportedia_phone', sanitize_text_field($_POST['phone']));
+        if (isset($_POST['nationality'])) update_user_meta($user_id, 'sportedia_nationality', sanitize_text_field($_POST['nationality']));
+        if (isset($_POST['gender'])) update_user_meta($user_id, 'sportedia_gender', sanitize_text_field($_POST['gender']));
+        if (isset($_POST['address'])) update_user_meta($user_id, 'sportedia_address', sanitize_textarea_field($_POST['address']));
+        if (isset($_POST['emirate'])) update_user_meta($user_id, 'sportedia_emirate', sanitize_text_field($_POST['emirate']));
         if (isset($_POST['height'])) update_user_meta($user_id, 'sportedia_height', sanitize_text_field($_POST['height']));
         if (isset($_POST['weight'])) update_user_meta($user_id, 'sportedia_weight', sanitize_text_field($_POST['weight']));
         if (isset($_POST['health_status'])) update_user_meta($user_id, 'sportedia_health_status', sanitize_text_field($_POST['health_status']));
@@ -215,6 +238,11 @@ class Sportedia_User_Manager {
         if (!empty($_FILES['avatar_file']['tmp_name'])) {
             if ($_FILES['avatar_file']['size'] > 2 * 1024 * 1024) {
                 wp_send_json_error('Profile photo exceeds 2 MB size limit.');
+            }
+            $file_type = wp_check_filetype($_FILES['avatar_file']['name']);
+            $allowed_types = array('jpg', 'jpeg', 'png', 'webp');
+            if (!in_array(strtolower($file_type['ext']), $allowed_types, true)) {
+                wp_send_json_error('Invalid image file format. Allowed formats: JPG, PNG, WEBP.');
             }
             require_once(ABSPATH . 'wp-admin/includes/file.php');
             require_once(ABSPATH . 'wp-admin/includes/media.php');
@@ -276,6 +304,11 @@ class Sportedia_User_Manager {
             if ($_FILES['avatar_file']['size'] > 2 * 1024 * 1024) {
                 wp_send_json_error('Profile photo exceeds 2 MB size limit.');
             }
+            $file_type = wp_check_filetype($_FILES['avatar_file']['name']);
+            $allowed_types = array('jpg', 'jpeg', 'png', 'webp');
+            if (!in_array(strtolower($file_type['ext']), $allowed_types, true)) {
+                wp_send_json_error('Invalid image file format. Allowed formats: JPG, PNG, WEBP.');
+            }
             require_once(ABSPATH . 'wp-admin/includes/file.php');
             require_once(ABSPATH . 'wp-admin/includes/media.php');
             require_once(ABSPATH . 'wp-admin/includes/image.php');
@@ -304,6 +337,12 @@ class Sportedia_User_Manager {
 
         if ($_FILES['avatar_file']['size'] > 2 * 1024 * 1024) {
             wp_send_json_error('Profile photo exceeds 2 MB size limit.');
+        }
+
+        $file_type = wp_check_filetype($_FILES['avatar_file']['name']);
+        $allowed_types = array('jpg', 'jpeg', 'png', 'webp');
+        if (!in_array(strtolower($file_type['ext']), $allowed_types, true)) {
+            wp_send_json_error('Invalid image file format. Allowed formats: JPG, PNG, WEBP.');
         }
 
         require_once(ABSPATH . 'wp-admin/includes/file.php');

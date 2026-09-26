@@ -85,7 +85,7 @@ class Sportedia_Attendance_Manager {
 
         $year  = intval(substr($month_year, 0, 4));
         $month = intval(substr($month_year, 5, 2));
-        $days_in_month = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        $days_in_month = intval(date('t', strtotime("$year-$month-01")));
 
         $scheduled_days = 0;
         for ($d = 1; $d <= $days_in_month; $d++) {
@@ -332,16 +332,21 @@ class Sportedia_Attendance_Manager {
         }
     }
 
-    public static function get_attendance($date = '', $branch_id = 0, $program_id = 0, $user_id = 0) {
+    public static function get_attendance($date_or_search = '', $branch_id = 0, $program_id = 0, $user_id = 0) {
         global $wpdb;
         $table = $wpdb->prefix . 'sportedia_attendance';
 
         $where = array('1=1');
         $params = array();
+        $search_term = '';
 
-        if (!empty($date)) {
-            $where[] = 'attendance_date = %s';
-            $params[] = $date;
+        if (!empty($date_or_search)) {
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_or_search)) {
+                $where[] = 'attendance_date = %s';
+                $params[] = $date_or_search;
+            } else {
+                $search_term = strtolower(trim($date_or_search));
+            }
         }
 
         if ($branch_id > 0) {
@@ -373,6 +378,14 @@ class Sportedia_Attendance_Manager {
             $u = get_userdata($row['user_id']);
             $row['user_name']   = $u ? $u->display_name : 'Unknown User';
             $row['employee_id'] = get_user_meta($row['user_id'], 'sportedia_employee_id', true);
+
+            if (!empty($search_term)) {
+                $match = (stripos(strtolower($row['user_name']), $search_term) !== false) ||
+                         (stripos(strtolower($row['employee_id']), $search_term) !== false);
+                if (!$match) {
+                    continue;
+                }
+            }
 
             $roles = $u ? (array) $u->roles : array();
             $role_name = !empty($roles) ? reset($roles) : 'Employee';

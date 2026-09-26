@@ -9,17 +9,26 @@ $attendanceRecords = Sportedia_Attendance_Manager::get_attendance($att_date, $br
 $branchesList      = Sportedia_Branch_Manager::get_branches();
 $programsList      = Sportedia_Program_Manager::get_programs();
 $usersList         = Sportedia_User_Manager::get_users();
+
+$kiosk_page_id = get_option('sportedia_kiosk_page_id');
+$kiosk_url = $kiosk_page_id ? get_permalink($kiosk_page_id) : home_url('/sportedia-kiosk/');
 ?>
 
 <div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
     <div>
-        <h1 class="sp-page-title">Attendance Management</h1>
-        <p class="sp-page-subtitle">Track daily check-ins for members and coaches across branches and programs.</p>
+        <h1 class="sp-page-title">Attendance & Absence Management</h1>
+        <p class="sp-page-subtitle">Track daily check-ins for members, employees, and coaches across branches and programs.</p>
     </div>
-    <button class="sp-btn sp-btn-primary" onclick="openAttModal()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Record Attendance
-    </button>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="<?php echo esc_url($kiosk_url); ?>" target="_blank" class="sp-btn sp-btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 12h10"/><path d="M12 7v10"/></svg>
+            Launch Attendance Kiosk
+        </a>
+        <button class="sp-btn sp-btn-primary" onclick="openAttModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Record Attendance
+        </button>
+    </div>
 </div>
 
 <div class="sp-card" style="padding: 16px;">
@@ -48,7 +57,7 @@ $usersList         = Sportedia_User_Manager::get_users();
             </select>
         </div>
 
-        <button type="submit" class="sp-btn sp-btn-secondary">Filter Records</button>
+        <button type="submit" class="sp-btn sp-btn-primary">Filter Records</button>
     </form>
 </div>
 
@@ -56,7 +65,7 @@ $usersList         = Sportedia_User_Manager::get_users();
     <table class="sp-table">
         <thead>
             <tr>
-                <th>Employee</th>
+                <th>Employee / Member</th>
                 <th>Role & Branch</th>
                 <th>Date</th>
                 <th>Scheduled Shift</th>
@@ -136,11 +145,14 @@ $usersList         = Sportedia_User_Manager::get_users();
 </div>
 
 <!-- Attendance Modal -->
-<div id="spAttModal" class="sp-modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:2000; align-items:center; justify-content:center;">
-    <div class="sp-card" style="width: 100%; max-width: 480px; margin: 20px;">
-        <h3 style="margin-top:0;">Record Attendance</h3>
-        <form id="spAttForm">
+<div id="spAttModal" class="sp-modal">
+    <div class="sp-modal-content" style="max-width: 480px;">
+        <div class="sp-modal-header">
+            <h3 class="sp-modal-title">Record Attendance</h3>
+            <button type="button" class="sp-modal-close" onclick="spCloseModal('spAttModal')">&times;</button>
+        </div>
 
+        <form id="spAttForm">
             <div class="sp-form-group">
                 <select id="sp_att_user_id" name="user_id" class="sp-floating-select" required>
                     <option value="">Select Member or Coach</option>
@@ -148,11 +160,11 @@ $usersList         = Sportedia_User_Manager::get_users();
                         <option value="<?php echo esc_attr($u['id']); ?>"><?php echo esc_html($u['name'] . ' (' . $u['role'] . ')'); ?></option>
                     <?php endforeach; ?>
                 </select>
-                <label for="sp_att_user_id" class="sp-floating-label">User</label>
+                <label for="sp_att_user_id" class="sp-floating-label">User *</label>
             </div>
 
-            <div style="display: flex; gap: 12px;">
-                <div class="sp-form-group" style="flex: 1;">
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
                     <select id="sp_att_branch_id" name="branch_id" class="sp-floating-select">
                         <option value="0">Default Branch</option>
                         <?php foreach ($branchesList as $b) : ?>
@@ -162,7 +174,7 @@ $usersList         = Sportedia_User_Manager::get_users();
                     <label for="sp_att_branch_id" class="sp-floating-label">Branch</label>
                 </div>
 
-                <div class="sp-form-group" style="flex: 1;">
+                <div class="sp-form-group">
                     <select id="sp_att_program_id" name="program_id" class="sp-floating-select">
                         <option value="0">General Check-in</option>
                         <?php foreach ($programsList as $p) : ?>
@@ -173,13 +185,13 @@ $usersList         = Sportedia_User_Manager::get_users();
                 </div>
             </div>
 
-            <div style="display: flex; gap: 12px;">
-                <div class="sp-form-group" style="flex: 1;">
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
                     <input type="date" id="sp_att_date" name="attendance_date" class="sp-floating-input" value="<?php echo esc_attr(date('Y-m-d')); ?>" required>
-                    <label for="sp_att_date" class="sp-floating-label">Date</label>
+                    <label for="sp_att_date" class="sp-floating-label">Date *</label>
                 </div>
 
-                <div class="sp-form-group" style="flex: 1;">
+                <div class="sp-form-group">
                     <select id="sp_att_user_type" name="user_type" class="sp-floating-select">
                         <option value="customer">Customer</option>
                         <option value="coach">Coach / Trainer</option>
@@ -197,7 +209,7 @@ $usersList         = Sportedia_User_Manager::get_users();
                 <label for="sp_att_status" class="sp-floating-label">Attendance Status</label>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+            <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--sp-border-color); padding-top: 16px;">
                 <button type="button" class="sp-btn sp-btn-secondary" onclick="spCloseModal('spAttModal')">Cancel</button>
                 <button type="submit" class="sp-btn sp-btn-primary">Save Check-in</button>
             </div>
