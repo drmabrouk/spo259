@@ -20,7 +20,8 @@ $user_address     = get_user_meta($user_id, 'sportedia_address', true);
 $user_emirate     = get_user_meta($user_id, 'sportedia_emirate', true);
 if (empty($user_emirate)) $user_emirate = 'Dubai';
 
-$emirates_list = array('Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman', 'Umm Al Quwain', 'Ras Al Khaimah', 'Fujairah');
+$emirates_list      = array('Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman', 'Umm Al Quwain', 'Ras Al Khaimah', 'Fujairah');
+$nationalities_list = Sportedia_User_Manager::get_nationalities();
 
 $nav_items = array(
     'dashboard' => array(
@@ -154,7 +155,12 @@ $nav_items = array(
                 </div>
 
                 <div class="sp-form-group">
-                    <input type="text" id="prof_nationality" name="nationality" class="sp-floating-input" value="<?php echo esc_attr($user_nationality); ?>" placeholder=" ">
+                    <select id="prof_nationality" name="nationality" class="sp-floating-select">
+                        <option value="">Select Nationality</option>
+                        <?php foreach ($nationalities_list as $nat) : ?>
+                            <option value="<?php echo esc_attr($nat); ?>" <?php selected($user_nationality, $nat); ?>><?php echo esc_html($nat); ?></option>
+                        <?php endforeach; ?>
+                    </select>
                     <label for="prof_nationality" class="sp-floating-label">Nationality</label>
                 </div>
             </div>
