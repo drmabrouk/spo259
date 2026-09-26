@@ -33,6 +33,8 @@ class Sportedia_Import_Export {
             wp_die('Unauthorized. Export functionality is restricted to authorized administrative users.');
         }
 
+        @set_time_limit(300);
+
         $type          = isset($_GET['export_type']) ? sanitize_text_field($_GET['export_type']) : 'users';
         $search        = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
         $branch_filter = isset($_GET['branch_filter']) ? intval($_GET['branch_filter']) : 0;
@@ -45,6 +47,8 @@ class Sportedia_Import_Export {
         header('Content-Disposition: attachment; filename=sportedia_' . $type . '_' . date('Y-m-d') . '.csv');
 
         $output = fopen('php://output', 'w');
+        // Add UTF-8 BOM for Microsoft Excel compatibility
+        fputs($output, "\xEF\xBB\xBF");
 
         if ($type === 'branches') {
             fputcsv($output, array('Branch ID', 'Branch Name', 'Code', 'Phone', 'Email', 'Status'));
@@ -122,6 +126,8 @@ class Sportedia_Import_Export {
             wp_send_json_error('No CSV file uploaded.');
         }
 
+        @set_time_limit(300);
+
         $file = $_FILES['csv_file']['tmp_name'];
         $handle = fopen($file, 'r');
         if (!$handle) {
@@ -130,13 +136,20 @@ class Sportedia_Import_Export {
 
         $header = fgetcsv($handle);
         $imported_count = 0;
+        $skipped_count  = 0;
+        $invalid_count  = 0;
 
         while (($row = fgetcsv($handle)) !== false) {
-            if (count($row) >= 4) {
+            if (count($row) >= 3) {
                 $employee_id  = sanitize_text_field($row[0]);
                 $name         = sanitize_text_field($row[1]);
                 $email        = sanitize_email($row[2]);
-                $role         = sanitize_text_field($row[3]);
+                $role         = isset($row[3]) ? sanitize_text_field($row[3]) : 'sportedia_customer';
+
+                if (empty($name) || empty($email)) {
+                    $invalid_count++;
+                    continue;
+                }
 
                 if (!empty($employee_id)) {
                     $existing_emp = get_users(array(
@@ -145,32 +158,42 @@ class Sportedia_Import_Export {
                         'number'     => 1,
                     ));
                     if (!empty($existing_emp)) {
+                        $skipped_count++;
                         continue;
                     }
                 }
 
-                if (!empty($email) && !email_exists($email)) {
-                    $username = strtolower(str_replace(' ', '', $employee_id));
-                    if (empty($username) || username_exists($username)) {
-                        $username = 'sp_' . rand(1000, 9999);
-                    }
-                    $random_pass = wp_generate_password(12, true);
-                    $user_id = wp_create_user($username, $random_pass, $email);
-
-                    if (!is_wp_error($user_id)) {
-                        wp_update_user(array('ID' => $user_id, 'display_name' => $name));
-                        $u = new WP_User($user_id);
-                        $u->set_role(!empty($role) ? $role : 'sportedia_customer');
-                        update_user_meta($user_id, 'sportedia_employee_id', $employee_id);
-                        update_user_meta($user_id, 'sportedia_status', 'active');
-                        $imported_count++;
-                    }
+                if (email_exists($email)) {
+                    $skipped_count++;
+                    continue;
                 }
+
+                $username = strtolower(str_replace(' ', '', $employee_id));
+                if (empty($username) || username_exists($username)) {
+                    $username = 'sp_' . rand(10000, 99999);
+                }
+                $random_pass = wp_generate_password(12, true);
+                $user_id = wp_create_user($username, $random_pass, $email);
+
+                if (!is_wp_error($user_id)) {
+                    wp_update_user(array('ID' => $user_id, 'display_name' => $name));
+                    $u = new WP_User($user_id);
+                    $u->set_role(!empty($role) ? $role : 'sportedia_customer');
+                    update_user_meta($user_id, 'sportedia_employee_id', !empty($employee_id) ? $employee_id : ('MEM-' . $user_id));
+                    update_user_meta($user_id, 'sportedia_status', 'active');
+                    $imported_count++;
+                } else {
+                    $invalid_count++;
+                }
+            } else {
+                $invalid_count++;
             }
         }
 
         fclose($handle);
         Sportedia_DB::log_activity('csv_import', 'Imported ' . $imported_count . ' users via CSV.');
-        wp_send_json_success('Successfully imported ' . $imported_count . ' users without duplicates.');
+
+        $msg = sprintf('Import Complete: %d imported successfully, %d skipped (duplicates), %d invalid rows.', $imported_count, $skipped_count, $invalid_count);
+        wp_send_json_success($msg);
     }
 }

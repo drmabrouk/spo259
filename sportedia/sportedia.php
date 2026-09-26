@@ -27,6 +27,7 @@ require_once SPORTEDIA_PLUGIN_DIR . 'includes/class-sportedia-roles.php';
 require_once SPORTEDIA_PLUGIN_DIR . 'includes/class-sportedia-restrictions.php';
 require_once SPORTEDIA_PLUGIN_DIR . 'includes/class-sportedia-template-loader.php';
 require_once SPORTEDIA_PLUGIN_DIR . 'includes/class-sportedia-auth.php';
+require_once SPORTEDIA_PLUGIN_DIR . 'includes/class-sportedia-whitelabel.php';
 
 // Require Modules
 require_once SPORTEDIA_PLUGIN_DIR . 'modules/dashboard/class-sportedia-dashboard.php';
@@ -70,6 +71,7 @@ final class Sportedia {
         new Sportedia_Restrictions();
         new Sportedia_Template_Loader();
         new Sportedia_Auth();
+        Sportedia_Whitelabel::instance();
 
         // Instantiate Modules
         Sportedia_Dashboard::instance();
