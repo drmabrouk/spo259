@@ -123,6 +123,114 @@ class Sportedia_DB {
             KEY user_id (user_id)
         ) $charset_collate;";
 
+        // =========================================================================
+        // SECONDARY DASHBOARD DATA-ISOLATED TABLES
+        // =========================================================================
+
+        // 8. Secondary Players Table
+        $table_sec_players = $wpdb->prefix . 'sportedia_sec_players';
+        $sql_sec_players = "CREATE TABLE $table_sec_players (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            player_code varchar(100) NOT NULL,
+            player_name varchar(191) NOT NULL,
+            sport varchar(100) DEFAULT 'Swimming' NOT NULL,
+            expiry_date date NOT NULL,
+            total_classes int(11) DEFAULT 12 NOT NULL,
+            remaining_classes int(11) DEFAULT 12 NOT NULL,
+            assigned_coach varchar(191) DEFAULT '' NOT NULL,
+            branch varchar(100) DEFAULT 'Main' NOT NULL,
+            status varchar(20) DEFAULT 'active' NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY (id),
+            UNIQUE KEY player_code (player_code),
+            KEY sport (sport),
+            KEY assigned_coach (assigned_coach)
+        ) $charset_collate;";
+
+        // 9. Secondary Coaches Table
+        $table_sec_coaches = $wpdb->prefix . 'sportedia_sec_coaches';
+        $sql_sec_coaches = "CREATE TABLE $table_sec_coaches (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            coach_name varchar(191) NOT NULL,
+            sport varchar(100) DEFAULT 'General' NOT NULL,
+            branch varchar(100) DEFAULT 'Main' NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY (id),
+            UNIQUE KEY coach_name (coach_name)
+        ) $charset_collate;";
+
+        // 10. Secondary Attendance & Session Tracking Table
+        $table_sec_attendance = $wpdb->prefix . 'sportedia_sec_attendance';
+        $sql_sec_attendance = "CREATE TABLE $table_sec_attendance (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            player_id bigint(20) UNSIGNED NOT NULL,
+            player_code varchar(100) NOT NULL,
+            player_name varchar(191) NOT NULL,
+            coach_name varchar(191) NOT NULL,
+            sport varchar(100) DEFAULT 'Swimming' NOT NULL,
+            attendance_date date NOT NULL,
+            entry_time time NOT NULL,
+            period varchar(50) DEFAULT '09:00' NOT NULL,
+            classes_used int(11) DEFAULT 1 NOT NULL,
+            remaining_classes int(11) DEFAULT 0 NOT NULL,
+            status varchar(20) DEFAULT 'completed' NOT NULL,
+            branch varchar(100) DEFAULT 'Main' NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY (id),
+            KEY player_code (player_code),
+            KEY coach_name (coach_name),
+            KEY attendance_date (attendance_date),
+            KEY period (period)
+        ) $charset_collate;";
+
+        // 11. Secondary End-of-Day Daily Reports Table
+        $table_sec_daily_reports = $wpdb->prefix . 'sportedia_sec_daily_reports';
+        $sql_sec_daily_reports = "CREATE TABLE $table_sec_daily_reports (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            report_date date NOT NULL,
+            branch varchar(100) DEFAULT 'ISCS MUW' NOT NULL,
+            new_registrations int(11) DEFAULT 0 NOT NULL,
+            card_payments decimal(10,2) DEFAULT '0.00' NOT NULL,
+            renewals int(11) DEFAULT 0 NOT NULL,
+            caps_count int(11) DEFAULT 0 NOT NULL,
+            cash_payments decimal(10,2) DEFAULT '0.00' NOT NULL,
+            total_caps_amount decimal(10,2) DEFAULT '0.00' NOT NULL,
+            staff_status varchar(255) DEFAULT 'All staff and coaches are present.' NOT NULL,
+            player_absences_count int(11) DEFAULT 0 NOT NULL,
+            recommendations text DEFAULT '',
+            total_income decimal(10,2) DEFAULT '0.00' NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY (id),
+            UNIQUE KEY report_date_branch (report_date, branch)
+        ) $charset_collate;";
+
+        // 12. Secondary End-of-Day Excel Records Table
+        $table_sec_eod_records = $wpdb->prefix . 'sportedia_sec_eod_records';
+        $sql_sec_eod_records = "CREATE TABLE $table_sec_eod_records (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            report_date date NOT NULL,
+            serial_no int(11) NOT NULL,
+            item_date date NOT NULL,
+            item_id varchar(100) NOT NULL,
+            item_name varchar(191) NOT NULL,
+            branch varchar(100) DEFAULT 'Main' NOT NULL,
+            sport varchar(100) DEFAULT 'Swimming' NOT NULL,
+            program varchar(191) DEFAULT 'Academy' NOT NULL,
+            registration_status varchar(50) DEFAULT 'New Registration' NOT NULL,
+            payment_amount decimal(10,2) DEFAULT '0.00' NOT NULL,
+            payment_method varchar(50) DEFAULT 'Card' NOT NULL,
+            notes text DEFAULT '',
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY (id),
+            KEY report_date (report_date),
+            KEY item_id (item_id)
+        ) $charset_collate;";
+
         dbDelta($sql_branches);
         dbDelta($sql_user_branches);
         dbDelta($sql_subscriptions);
@@ -130,6 +238,12 @@ class Sportedia_DB {
         dbDelta($sql_attendance);
         dbDelta($sql_settings);
         dbDelta($sql_activity_log);
+
+        dbDelta($sql_sec_players);
+        dbDelta($sql_sec_coaches);
+        dbDelta($sql_sec_attendance);
+        dbDelta($sql_sec_daily_reports);
+        dbDelta($sql_sec_eod_records);
     }
 
     public static function log_activity($action, $details = '', $user_id = 0) {
