@@ -17,6 +17,10 @@ class Sportedia_Secondary_Manager {
 
         add_action('wp_ajax_sportedia_sec_save_coach', array($this, 'ajax_save_coach'));
         add_action('wp_ajax_sportedia_sec_delete_coach', array($this, 'ajax_delete_coach'));
+        add_action('wp_ajax_sportedia_sec_get_coach_details', array($this, 'ajax_get_coach_details'));
+
+        add_action('wp_ajax_sportedia_sec_save_branch', array($this, 'ajax_save_branch'));
+        add_action('wp_ajax_sportedia_sec_delete_branch', array($this, 'ajax_delete_branch'));
 
         add_action('wp_ajax_sportedia_sec_search_entities', array($this, 'ajax_search_entities'));
         add_action('wp_ajax_sportedia_sec_record_attendance', array($this, 'ajax_record_attendance'));
@@ -27,6 +31,30 @@ class Sportedia_Secondary_Manager {
 
         add_action('wp_ajax_sportedia_sec_export_eod', array($this, 'handle_export_eod'));
         add_action('wp_ajax_sportedia_sec_export_attendance', array($this, 'handle_export_attendance'));
+
+        add_action('wp_ajax_sportedia_sec_export_coach_report', array($this, 'handle_export_coach_report'));
+        add_action('wp_ajax_sportedia_sec_export_all_coaches_report', array($this, 'handle_export_all_coaches_report'));
+    }
+
+    // Helper: Get Secondary Branches
+    public static function get_sec_branches($search = '') {
+        global $wpdb;
+        $table = $wpdb->prefix . 'sportedia_sec_branches';
+
+        $results = $wpdb->get_results("SELECT * FROM $table ORDER BY id DESC", ARRAY_A);
+        $branches = array();
+
+        foreach ($results as $row) {
+            if (!empty($search)) {
+                $s = strtolower(trim($search));
+                if (stripos(strtolower($row['branch_name']), $s) === false && stripos(strtolower($row['code']), $s) === false) {
+                    continue;
+                }
+            }
+            $branches[] = $row;
+        }
+
+        return $branches;
     }
 
     // Helper: Get Players sorted newest to oldest
@@ -36,11 +64,6 @@ class Sportedia_Secondary_Manager {
 
         $where = array('1=1');
         $params = array();
-
-        if (!empty($branch)) {
-            $where[] = "branch = %s";
-            $params[] = $branch;
-        }
 
         if (!empty($coach)) {
             $where[] = "assigned_coach = %s";
@@ -94,25 +117,178 @@ class Sportedia_Secondary_Manager {
         return $players;
     }
 
-    // Helper: Get Coaches
-    public static function get_coaches($search = '') {
+    // Helper: Get Coaches with Analytics
+    public static function get_coaches($search = '', $start_date = '', $end_date = '') {
         global $wpdb;
-        $table = $wpdb->prefix . 'sportedia_sec_coaches';
+        $coaches_table = $wpdb->prefix . 'sportedia_sec_coaches';
+        $players_table = $wpdb->prefix . 'sportedia_sec_players';
+        $att_table     = $wpdb->prefix . 'sportedia_sec_attendance';
 
-        $results = $wpdb->get_results("SELECT * FROM $table ORDER BY id DESC", ARRAY_A);
+        if (empty($start_date)) $start_date = date('Y-m-d');
+        if (empty($end_date))   $end_date   = date('Y-m-d');
+
+        $results = $wpdb->get_results("SELECT * FROM $coaches_table ORDER BY id DESC", ARRAY_A);
         $coaches = array();
 
-        foreach ($results as $row) {
+        foreach ($results as $c) {
             if (!empty($search)) {
                 $s = strtolower(trim($search));
-                if (stripos(strtolower($row['coach_name']), $s) === false && stripos(strtolower($row['sport']), $s) === false) {
-                    continue;
-                }
+                $match = (stripos(strtolower($c['coach_name']), $s) !== false) ||
+                         (stripos(strtolower($c['sport']), $s) !== false) ||
+                         (!empty($c['mobile_number']) && stripos(strtolower($c['mobile_number']), $s) !== false) ||
+                         (!empty($c['branch']) && stripos(strtolower($c['branch']), $s) !== false);
+                if (!$match) continue;
             }
-            $coaches[] = $row;
+
+            $coach_name = $c['coach_name'];
+
+            // Assigned Players
+            $assigned_players = $wpdb->get_results($wpdb->prepare("SELECT id, player_code, player_name, remaining_classes, total_classes, status FROM $players_table WHERE assigned_coach = %s", $coach_name), ARRAY_A);
+            $total_players = count($assigned_players);
+
+            // Present Players in Date Range
+            $present_player_ids = $wpdb->get_col($wpdb->prepare(
+                "SELECT DISTINCT player_id FROM $att_table WHERE coach_name = %s AND attendance_date >= %s AND attendance_date <= %s",
+                $coach_name, $start_date, $end_date
+            ));
+            $present_count = count($present_player_ids);
+            $absent_count  = max(0, $total_players - $present_count);
+
+            // Sessions Total
+            $total_sessions_conducted = $wpdb->get_var($wpdb->prepare(
+                "SELECT SUM(classes_used) FROM $att_table WHERE coach_name = %s AND attendance_date >= %s AND attendance_date <= %s",
+                $coach_name, $start_date, $end_date
+            ));
+            $total_sessions_conducted = intval($total_sessions_conducted);
+
+            // Attendance Rate
+            $att_rate = $total_players > 0 ? round(($present_count / $total_players) * 100, 1) : 0;
+
+            $c['total_players']     = $total_players;
+            $c['present_players']   = $present_count;
+            $c['absent_players']    = $absent_count;
+            $c['completed_sessions']= $total_sessions_conducted;
+            $c['attendance_rate']   = $att_rate;
+            $c['assigned_players']  = $assigned_players;
+
+            $coaches[] = $c;
         }
 
         return $coaches;
+    }
+
+    // AJAX Get Coach Details & Player Tracking
+    public function ajax_get_coach_details() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        $coach_id   = isset($_POST['coach_id']) ? intval($_POST['coach_id']) : 0;
+        $start_date = isset($_POST['start_date']) ? sanitize_text_field($_POST['start_date']) : date('Y-m-d');
+        $end_date   = isset($_POST['end_date']) ? sanitize_text_field($_POST['end_date']) : date('Y-m-d');
+
+        global $wpdb;
+        $coaches_table = $wpdb->prefix . 'sportedia_sec_coaches';
+        $players_table = $wpdb->prefix . 'sportedia_sec_players';
+        $att_table     = $wpdb->prefix . 'sportedia_sec_attendance';
+
+        $c = $wpdb->get_row($wpdb->prepare("SELECT * FROM $coaches_table WHERE id = %d", $coach_id), ARRAY_A);
+        if (!$c) {
+            wp_send_json_error('Coach record not found.');
+        }
+
+        $coach_name = $c['coach_name'];
+        $players    = $wpdb->get_results($wpdb->prepare("SELECT * FROM $players_table WHERE assigned_coach = %s ORDER BY id DESC", $coach_name), ARRAY_A);
+
+        $present_player_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT DISTINCT player_id FROM $att_table WHERE coach_name = %s AND attendance_date >= %s AND attendance_date <= %s",
+            $coach_name, $start_date, $end_date
+        ));
+
+        $player_list = array();
+        foreach ($players as $p) {
+            $p_id = intval($p['id']);
+            $is_present = in_array($p_id, $present_player_ids, true);
+            $p['today_attendance'] = $is_present ? 'Present' : 'Absent';
+            $player_list[] = $p;
+        }
+
+        $history = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $att_table WHERE coach_name = %s AND attendance_date >= %s AND attendance_date <= %s ORDER BY id DESC LIMIT 50",
+            $coach_name, $start_date, $end_date
+        ), ARRAY_A);
+
+        wp_send_json_success(array(
+            'coach'       => $c,
+            'players'     => $player_list,
+            'history'     => $history,
+            'start_date'  => $start_date,
+            'end_date'    => $end_date
+        ));
+    }
+
+    // AJAX Save Secondary Branch
+    public function ajax_save_branch() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error('Unauthorized.');
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'sportedia_sec_branches';
+
+        $branch_id   = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
+        $branch_name = sanitize_text_field($_POST['branch_name']);
+        $code        = sanitize_text_field($_POST['code']);
+        $status      = sanitize_text_field($_POST['status']);
+
+        if (empty($branch_name)) {
+            wp_send_json_error('Branch Name is required.');
+        }
+
+        $existing = $wpdb->get_var($wpdb->prepare("SELECT id FROM $table WHERE branch_name = %s AND id != %d", $branch_name, $branch_id));
+        if ($existing) {
+            wp_send_json_error('Secondary Branch Name already exists.');
+        }
+
+        $data = array(
+            'branch_name' => $branch_name,
+            'code'        => !empty($code) ? $code : ('BR-' . rand(10, 99)),
+            'status'      => !empty($status) ? $status : 'active'
+        );
+
+        if ($branch_id > 0) {
+            $wpdb->update($table, $data, array('id' => $branch_id), array('%s', '%s', '%s'), array('%d'));
+            Sportedia_DB::log_activity('sec_branch_update', 'Updated secondary branch ' . $branch_name);
+            wp_send_json_success('Secondary branch updated successfully.');
+        } else {
+            $wpdb->insert($table, $data, array('%s', '%s', '%s'));
+            Sportedia_DB::log_activity('sec_branch_create', 'Created secondary branch ' . $branch_name);
+            wp_send_json_success('Secondary branch created successfully.');
+        }
+    }
+
+    // AJAX Delete Secondary Branch
+    public function ajax_delete_branch() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        if (!current_user_can('sportedia_manage_branches') && !Sportedia_Roles::is_sys_admin() && !Sportedia_Roles::is_general_mgr()) {
+            wp_send_json_error('Unauthorized.');
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'sportedia_sec_branches';
+        $branch_id = isset($_POST['branch_id']) ? intval($_POST['branch_id']) : 0;
+
+        if ($branch_id > 0) {
+            $b = $wpdb->get_row($wpdb->prepare("SELECT branch_name FROM $table WHERE id = %d", $branch_id));
+            if ($b) {
+                $wpdb->delete($table, array('id' => $branch_id), array('%d'));
+                Sportedia_DB::log_activity('sec_branch_delete', 'Deleted secondary branch ' . $b->branch_name);
+                wp_send_json_success('Secondary branch deleted successfully.');
+            }
+        }
+
+        wp_send_json_error('Invalid branch ID.');
     }
 
     // AJAX Save Player
@@ -214,13 +390,18 @@ class Sportedia_Secondary_Manager {
         global $wpdb;
         $table = $wpdb->prefix . 'sportedia_sec_coaches';
 
-        $coach_id   = isset($_POST['coach_id']) ? intval($_POST['coach_id']) : 0;
-        $coach_name = sanitize_text_field($_POST['coach_name']);
-        $sport      = isset($_POST['sport']) ? sanitize_text_field($_POST['sport']) : 'General';
-        $branch     = isset($_POST['branch']) ? sanitize_text_field($_POST['branch']) : 'Main';
+        $coach_id      = isset($_POST['coach_id']) ? intval($_POST['coach_id']) : 0;
+        $coach_name    = sanitize_text_field($_POST['coach_name']);
+        $mobile_number = sanitize_text_field($_POST['mobile_number']);
+        $sport         = isset($_POST['sport']) ? sanitize_text_field($_POST['sport']) : 'General';
+        $branch        = isset($_POST['branch']) ? sanitize_text_field($_POST['branch']) : 'Main';
 
         if (empty($coach_name)) {
             wp_send_json_error('Coach Name is required.');
+        }
+
+        if (!empty($mobile_number) && !preg_match('/^[0-9+\s-]{7,20}$/', $mobile_number)) {
+            wp_send_json_error('Invalid mobile number format.');
         }
 
         $existing = $wpdb->get_var($wpdb->prepare("SELECT id FROM $table WHERE coach_name = %s AND id != %d", $coach_name, $coach_id));
@@ -229,17 +410,18 @@ class Sportedia_Secondary_Manager {
         }
 
         $data = array(
-            'coach_name' => $coach_name,
-            'sport'      => $sport,
-            'branch'     => $branch
+            'coach_name'    => $coach_name,
+            'mobile_number' => $mobile_number,
+            'sport'         => $sport,
+            'branch'        => $branch
         );
 
         if ($coach_id > 0) {
-            $wpdb->update($table, $data, array('id' => $coach_id), array('%s', '%s', '%s'), array('%d'));
+            $wpdb->update($table, $data, array('id' => $coach_id), array('%s', '%s', '%s', '%s'), array('%d'));
             Sportedia_DB::log_activity('sec_coach_update', 'Updated secondary coach ' . $coach_name);
             wp_send_json_success('Coach updated successfully.');
         } else {
-            $wpdb->insert($table, $data, array('%s', '%s', '%s'));
+            $wpdb->insert($table, $data, array('%s', '%s', '%s', '%s'));
             Sportedia_DB::log_activity('sec_coach_create', 'Created secondary coach ' . $coach_name);
             wp_send_json_success('Coach added successfully.');
         }
@@ -290,8 +472,8 @@ class Sportedia_Secondary_Manager {
         ), ARRAY_A);
 
         $coaches = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, coach_name, sport FROM $coaches_table WHERE coach_name LIKE %s OR sport LIKE %s LIMIT 10",
-            $s, $s
+            "SELECT id, coach_name, mobile_number, sport, branch FROM $coaches_table WHERE coach_name LIKE %s OR sport LIKE %s OR mobile_number LIKE %s LIMIT 10",
+            $s, $s, $s
         ), ARRAY_A);
 
         wp_send_json_success(array(
@@ -504,6 +686,148 @@ class Sportedia_Secondary_Manager {
         }
 
         wp_send_json_error('Invalid item ID.');
+    }
+
+    // Export Individual Coach Management Report
+    public function handle_export_coach_report() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        @set_time_limit(300);
+        $coach_id   = isset($_GET['coach_id']) ? intval($_GET['coach_id']) : 0;
+        $start_date = isset($_GET['start_date']) ? sanitize_text_field($_GET['start_date']) : date('Y-m-d');
+        $end_date   = isset($_GET['end_date']) ? sanitize_text_field($_GET['end_date']) : date('Y-m-d');
+
+        global $wpdb;
+        $coaches_table = $wpdb->prefix . 'sportedia_sec_coaches';
+        $players_table = $wpdb->prefix . 'sportedia_sec_players';
+        $att_table     = $wpdb->prefix . 'sportedia_sec_attendance';
+
+        $c = $wpdb->get_row($wpdb->prepare("SELECT * FROM $coaches_table WHERE id = %d", $coach_id), ARRAY_A);
+        if (!$c) {
+            wp_die('Coach not found.');
+        }
+
+        $coach_name = $c['coach_name'];
+        $players    = $wpdb->get_results($wpdb->prepare("SELECT * FROM $players_table WHERE assigned_coach = %s", $coach_name), ARRAY_A);
+        $total_players = count($players);
+
+        $present_player_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT DISTINCT player_id FROM $att_table WHERE coach_name = %s AND attendance_date >= %s AND attendance_date <= %s",
+            $coach_name, $start_date, $end_date
+        ));
+        $present_count = count($present_player_ids);
+        $absent_count  = max(0, $total_players - $present_count);
+
+        $att_records = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $att_table WHERE coach_name = %s AND attendance_date >= %s AND attendance_date <= %s ORDER BY attendance_date ASC, entry_time ASC",
+            $coach_name, $start_date, $end_date
+        ), ARRAY_A);
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename=Coach_Report_' . str_replace(' ', '_', $coach_name) . '_' . $start_date . '_to_' . $end_date . '.csv');
+
+        $output = fopen('php://output', 'w');
+        fputs($output, "\xEF\xBB\xBF"); // UTF-8 BOM
+
+        // Coach Header Section
+        fputcsv($output, array('INDIVIDUAL COACH PERFORMANCE REPORT'));
+        fputcsv($output, array('Coach Name', $c['coach_name']));
+        fputcsv($output, array('Mobile Number', $c['mobile_number'] ? $c['mobile_number'] : 'N/A'));
+        fputcsv($output, array('Branch', $c['branch']));
+        fputcsv($output, array('Report Period', $start_date . ' to ' . $end_date));
+        fputcsv($output, array('Total Assigned Players', $total_players));
+        fputcsv($output, array('Players Present', $present_count));
+        fputcsv($output, array('Players Absent', $absent_count));
+        fputcsv($output, array('Attendance Rate', ($total_players > 0 ? round(($present_count / $total_players) * 100, 1) : 0) . '%'));
+        fputcsv($output, array('')); // Blank row
+
+        // Player Attendance Breakdown Header
+        fputcsv($output, array('Serial No.', 'Date', 'Time', 'Period', 'Player Code', 'Player Name', 'Sport', 'Classes Used', 'Attendance Status', 'Session Status', 'Remaining Classes', 'Notes'));
+
+        $sr = 1;
+        foreach ($att_records as $a) {
+            fputcsv($output, array(
+                $sr++,
+                $a['attendance_date'],
+                $a['entry_time'],
+                $a['period'],
+                $a['player_code'],
+                $a['player_name'],
+                $a['sport'],
+                $a['classes_used'],
+                'Present',
+                $a['status'],
+                $a['remaining_classes'],
+                'Verified Session'
+            ));
+        }
+
+        // Include Absent Players List
+        foreach ($players as $p) {
+            if (!in_array(intval($p['id']), $present_player_ids, true)) {
+                fputcsv($output, array(
+                    $sr++,
+                    $start_date,
+                    'N/A',
+                    'N/A',
+                    $p['player_code'],
+                    $p['player_name'],
+                    $p['sport'],
+                    0,
+                    'Absent',
+                    $p['status'],
+                    $p['remaining_classes'],
+                    'No session recorded in date range'
+                ));
+            }
+        }
+
+        fclose($output);
+        exit;
+    }
+
+    // Export Complete All Coaches Report
+    public function handle_export_all_coaches_report() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        @set_time_limit(300);
+        $start_date = isset($_GET['start_date']) ? sanitize_text_field($_GET['start_date']) : date('Y-m-d');
+        $end_date   = isset($_GET['end_date']) ? sanitize_text_field($_GET['end_date']) : date('Y-m-d');
+
+        global $wpdb;
+        $coaches = self::get_coaches('', $start_date, $end_date);
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename=Complete_Coaches_Management_Report_' . $start_date . '_to_' . $end_date . '.csv');
+
+        $output = fopen('php://output', 'w');
+        fputs($output, "\xEF\xBB\xBF"); // UTF-8 BOM
+
+        // Executive Summary
+        fputcsv($output, array('ALL COACHES EXECUTIVE SUMMARY REPORT'));
+        fputcsv($output, array('Reporting Period', $start_date . ' to ' . $end_date));
+        fputcsv($output, array('Total Coaches', count($coaches)));
+        fputcsv($output, array('Generated Date', date('Y-m-d H:i:s')));
+        fputcsv($output, array('')); // Blank row
+
+        // Summary Table Header
+        fputcsv($output, array('Coach Name', 'Branch', 'Mobile Number', 'Total Players', 'Present', 'Absent', 'Sessions Conducted', 'Attendance Rate (%)'));
+
+        foreach ($coaches as $c) {
+            fputcsv($output, array(
+                $c['coach_name'],
+                $c['branch'],
+                $c['mobile_number'] ? $c['mobile_number'] : 'N/A',
+                $c['total_players'],
+                $c['present_players'],
+                $c['absent_players'],
+                $c['completed_sessions'],
+                $c['attendance_rate'] . '%'
+            ));
+        }
+
+        fclose($output);
+        exit;
     }
 
     // Export EOD Excel/CSV
