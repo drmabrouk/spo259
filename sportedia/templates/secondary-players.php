@@ -55,8 +55,12 @@ $periodsList = array('09:00', '10:00', '11:00', '12:00', '16:00', '17:00', '18:0
 
 <!-- Modern Player Cards (Sorted Newest to Oldest) -->
 <?php if (!empty($playersList)) : ?>
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
-        <?php foreach ($playersList as $p) : ?>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px;">
+        <?php foreach ($playersList as $p) :
+            $total = intval($p['total_classes']);
+            $rem   = intval($p['remaining_classes']);
+            $used  = max(0, $total - $rem);
+        ?>
             <div class="sp-card" style="margin-bottom: 0; padding: 18px; border-radius: var(--sp-radius); display: flex; flex-direction: column; justify-content: space-between;">
                 <div>
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
@@ -70,7 +74,7 @@ $periodsList = array('09:00', '10:00', '11:00', '12:00', '16:00', '17:00', '18:0
                     </div>
 
                     <div style="background: #f8f9fa; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 12px; font-size: 12px; margin-bottom: 14px;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                             <div>
                                 <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">SPORT</span>
                                 <strong><?php echo esc_html($p['sport']); ?></strong>
@@ -81,14 +85,19 @@ $periodsList = array('09:00', '10:00', '11:00', '12:00', '16:00', '17:00', '18:0
                             </div>
                         </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <!-- RED (USED) vs GREEN (REMAINING) Badges -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; border-top: 1px dashed var(--sp-border-color); padding-top: 8px; text-align: center;">
                             <div>
-                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">EXPIRY DATE</span>
-                                <span style="font-family: monospace;"><?php echo esc_html($p['expiry_date']); ?></span>
+                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">TOTAL</span>
+                                <strong><?php echo $total; ?></strong>
                             </div>
                             <div>
-                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">CLASSES BALANCE</span>
-                                <strong style="color: #166534; font-size: 13px;"><?php echo esc_html($p['remaining_classes']); ?> / <?php echo esc_html($p['total_classes']); ?> Remaining</strong>
+                                <span style="font-size: 10px; color: #dc2626; display: block; font-weight: 700;">USED (RED)</span>
+                                <span class="sp-badge" style="background:#fee2e2; color:#dc2626; font-weight:bold;"><?php echo $used; ?></span>
+                            </div>
+                            <div>
+                                <span style="font-size: 10px; color: #16a34a; display: block; font-weight: 700;">REMAINING (GREEN)</span>
+                                <span class="sp-badge" style="background:#dcfce7; color:#16a34a; font-weight:bold;"><?php echo $rem; ?></span>
                             </div>
                         </div>
                     </div>

@@ -25,6 +25,8 @@ class Sportedia_Secondary_Manager {
         add_action('wp_ajax_sportedia_sec_search_entities', array($this, 'ajax_search_entities'));
         add_action('wp_ajax_sportedia_sec_record_attendance', array($this, 'ajax_record_attendance'));
 
+        add_action('wp_ajax_sportedia_sec_assign_player_coach', array($this, 'ajax_assign_player_coach'));
+
         add_action('wp_ajax_sportedia_sec_save_daily_report', array($this, 'ajax_save_daily_report'));
         add_action('wp_ajax_sportedia_sec_add_eod_item', array($this, 'ajax_add_eod_item'));
         add_action('wp_ajax_sportedia_sec_delete_eod_item', array($this, 'ajax_delete_eod_item'));
@@ -451,6 +453,63 @@ class Sportedia_Secondary_Manager {
         wp_send_json_error('Invalid coach ID.');
     }
 
+    // AJAX Assign Player to Coach
+    public function ajax_assign_player_coach() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error('Unauthorized.');
+        }
+
+        global $wpdb;
+        $players_table = $wpdb->prefix . 'sportedia_sec_players';
+
+        $player_id  = isset($_POST['player_id']) ? intval($_POST['player_id']) : 0;
+        $coach_name = isset($_POST['coach_name']) ? sanitize_text_field($_POST['coach_name']) : '';
+        $confirm    = isset($_POST['confirm']) && $_POST['confirm'] === '1';
+
+        if ($player_id <= 0 || empty($coach_name)) {
+            wp_send_json_error('Invalid player or coach selection.');
+        }
+
+        $player = $wpdb->get_row($wpdb->prepare("SELECT * FROM $players_table WHERE id = %d", $player_id), ARRAY_A);
+        if (!$player) {
+            wp_send_json_error('Player record not found.');
+        }
+
+        // Check if player is already assigned to this coach
+        if ($player['assigned_coach'] === $coach_name) {
+            wp_send_json_error(array(
+                'already_assigned' => true,
+                'message'          => 'Player ' . $player['player_name'] . ' is already assigned to coach ' . $coach_name . '.'
+            ));
+        }
+
+        // Check if assigned to another coach and requires confirmation
+        if (!empty($player['assigned_coach']) && $player['assigned_coach'] !== 'Unassigned' && !$confirm) {
+            wp_send_json_error(array(
+                'reassign_confirm' => true,
+                'current_coach'    => $player['assigned_coach'],
+                'message'          => 'Player ' . $player['player_name'] . ' is currently assigned to ' . $player['assigned_coach'] . '. Reassign to ' . $coach_name . '?'
+            ));
+        }
+
+        // Update assigned coach in DB
+        $wpdb->update($players_table, array('assigned_coach' => $coach_name), array('id' => $player_id), array('%s'), array('%d'));
+
+        Sportedia_DB::log_activity('sec_assign_player_coach', 'Assigned player ' . $player['player_name'] . ' (' . $player['player_code'] . ') to coach ' . $coach_name);
+
+        // Fetch updated coach stats
+        $coaches = self::get_coaches($coach_name);
+        $updated_coach = !empty($coaches) ? $coaches[0] : null;
+
+        wp_send_json_success(array(
+            'message'       => 'Player ' . $player['player_name'] . ' successfully assigned to coach ' . $coach_name . '.',
+            'player'        => $player,
+            'coach_stats'   => $updated_coach
+        ));
+    }
+
     // AJAX Search Players & Coaches
     public function ajax_search_entities() {
         check_ajax_referer('sportedia_nonce', 'nonce');
@@ -466,10 +525,18 @@ class Sportedia_Secondary_Manager {
 
         $s = '%' . $wpdb->esc_like($query) . '%';
 
-        $players = $wpdb->get_results($wpdb->prepare(
-            "SELECT id, player_code, player_name, sport, remaining_classes, assigned_coach, expiry_date, status FROM $players_table WHERE player_name LIKE %s OR player_code LIKE %s OR sport LIKE %s LIMIT 10",
-            $s, $s, $s
+        $results = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, player_code, player_name, sport, total_classes, remaining_classes, assigned_coach, expiry_date, status, branch FROM $players_table WHERE player_name LIKE %s OR player_code LIKE %s OR sport LIKE %s OR id = %d LIMIT 15",
+            $s, $s, $s, intval($query)
         ), ARRAY_A);
+
+        $players = array();
+        foreach ($results as $p) {
+            $total = intval($p['total_classes']);
+            $rem   = intval($p['remaining_classes']);
+            $p['used_classes'] = max(0, $total - $rem);
+            $players[] = $p;
+        }
 
         $coaches = $wpdb->get_results($wpdb->prepare(
             "SELECT id, coach_name, mobile_number, sport, branch FROM $coaches_table WHERE coach_name LIKE %s OR sport LIKE %s OR mobile_number LIKE %s LIMIT 10",
@@ -695,7 +762,7 @@ class Sportedia_Secondary_Manager {
         wp_send_json_error('Invalid item ID.');
     }
 
-    // Export Individual Coach Management Report
+    // Export Individual Coach Management Report (Corporate Excel Workbook)
     public function handle_export_coach_report() {
         check_ajax_referer('sportedia_nonce', 'nonce');
 
@@ -715,7 +782,7 @@ class Sportedia_Secondary_Manager {
         }
 
         $coach_name = $c['coach_name'];
-        $players    = $wpdb->get_results($wpdb->prepare("SELECT * FROM $players_table WHERE assigned_coach = %s", $coach_name), ARRAY_A);
+        $players    = $wpdb->get_results($wpdb->prepare("SELECT * FROM $players_table WHERE assigned_coach = %s ORDER BY player_name ASC", $coach_name), ARRAY_A);
         $total_players = count($players);
 
         $present_player_ids = $wpdb->get_col($wpdb->prepare(
@@ -724,76 +791,90 @@ class Sportedia_Secondary_Manager {
         ));
         $present_count = count($present_player_ids);
         $absent_count  = max(0, $total_players - $present_count);
+        $att_rate      = $total_players > 0 ? round(($present_count / $total_players) * 100, 1) : 0;
 
-        $att_records = $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM $att_table WHERE coach_name = %s AND attendance_date >= %s AND attendance_date <= %s ORDER BY attendance_date ASC, entry_time ASC",
-            $coach_name, $start_date, $end_date
-        ), ARRAY_A);
+        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+        header('Content-Disposition: attachment; filename=Coach_Report_' . str_replace(' ', '_', $coach_name) . '_' . $start_date . '_to_' . $end_date . '.xls');
 
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename=Coach_Report_' . str_replace(' ', '_', $coach_name) . '_' . $start_date . '_to_' . $end_date . '.csv');
+        echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+        echo '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">';
+        echo '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>';
+        echo '<x:Name>Coach Report</x:Name>';
+        echo '<x:WorksheetOptions><x:DisplayGridlines/><x:Print><x:ValidPrinterInfo/><x:PaperSizeIndex>9</x:PaperSizeIndex><x:Scale>100</x:Scale><x:FitWidth>1</x:FitWidth><x:FitHeight>0</x:FitHeight></x:Print><x:Selected/><x:FreezePanes/><x:FrozenNoSplit/><x:SplitHorizontal>6</x:SplitHorizontal><x:TopRowBottomPane>6</x:TopRowBottomPane><x:ActivePane>2</x:ActivePane></x:WorksheetOptions>';
+        echo '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
+        echo '<style>';
+        echo 'body { font-family: "Calibri", "Segoe UI", Arial, sans-serif; font-size: 11pt; }';
+        echo 'table { border-collapse: collapse; width: 100%; table-layout: fixed; }';
+        echo 'th, td { border: 0.5pt solid #CBD5E1; padding: 8px; font-size: 10pt; vertical-align: middle; }';
+        echo '.title-row { background-color: #0F172A; color: #FFFFFF; font-size: 16pt; font-weight: bold; text-align: center; height: 40px; }';
+        echo '.subtitle-row { background-color: #1E293B; color: #F8FAFC; font-size: 11pt; font-weight: bold; text-align: center; height: 28px; }';
+        echo '.header-cell { background-color: #0284C7; color: #FFFFFF; font-weight: bold; text-align: center; height: 32px; font-size: 10pt; }';
+        echo '.text-cell { text-align: left; mso-number-format:"\@"; }';
+        echo '.center-cell { text-align: center; mso-number-format:"\@"; }';
+        echo '.used-cell { text-align: center; background-color: #FEE2E2; color: #DC2626; font-weight: bold; }';
+        echo '.rem-cell { text-align: center; background-color: #DCFCE7; color: #16A34A; font-weight: bold; }';
+        echo '</style></head><body>';
 
-        $output = fopen('php://output', 'w');
-        fputs($output, "\xEF\xBB\xBF"); // UTF-8 BOM
+        echo '<table>';
+        echo '<col style="width: 50px;">';  // A: S
+        echo '<col style="width: 110px;">'; // B: CODE
+        echo '<col style="width: 180px;">'; // C: NAME
+        echo '<col style="width: 130px;">'; // D: SPORT
+        echo '<col style="width: 100px;">'; // E: TOTAL
+        echo '<col style="width: 120px;">'; // F: USED (RED)
+        echo '<col style="width: 130px;">'; // G: REMAINING (GREEN)
+        echo '<col style="width: 140px;">'; // H: TODAY ATTENDANCE
+        echo '<col style="width: 120px;">'; // I: STATUS
 
-        // Coach Header Section
-        fputcsv($output, array('INDIVIDUAL COACH PERFORMANCE REPORT'));
-        fputcsv($output, array('Coach Name', $c['coach_name']));
-        fputcsv($output, array('Mobile Number', $c['mobile_number'] ? $c['mobile_number'] : 'N/A'));
-        fputcsv($output, array('Branch', $c['branch']));
-        fputcsv($output, array('Report Period', $start_date . ' to ' . $end_date));
-        fputcsv($output, array('Total Assigned Players', $total_players));
-        fputcsv($output, array('Players Present', $present_count));
-        fputcsv($output, array('Players Absent', $absent_count));
-        fputcsv($output, array('Attendance Rate', ($total_players > 0 ? round(($present_count / $total_players) * 100, 1) : 0) . '%'));
-        fputcsv($output, array('')); // Blank row
+        // Title Header
+        echo '<tr><td colspan="9" class="title-row">SPORTEDIA ACADEMY — COACH PERFORMANCE & SESSION REPORT</td></tr>';
+        echo '<tr><td colspan="9" class="subtitle-row">COACH: ' . esc_html(mb_strtoupper($c['coach_name'], 'UTF-8')) . ' | BRANCH: ' . esc_html(mb_strtoupper($c['branch'], 'UTF-8')) . ' | PERIOD: ' . esc_html($start_date) . ' TO ' . esc_html($end_date) . '</td></tr>';
+        echo '<tr><td colspan="9" style="background-color: #F8FAFC; text-align: center; font-weight: bold; padding: 6px;">ASSIGNED PLAYERS: ' . $total_players . ' | PRESENT: ' . $present_count . ' | ABSENT: ' . $absent_count . ' | ATTENDANCE RATE: ' . $att_rate . '%</td></tr>';
+        echo '<tr><td colspan="9" style="height: 8px; border: none;"></td></tr>';
 
-        // Player Attendance Breakdown Header
-        fputcsv($output, array('Serial No.', 'Date', 'Time', 'Period', 'Player Code', 'Player Name', 'Sport', 'Classes Used', 'Attendance Status', 'Session Status', 'Remaining Classes', 'Notes'));
+        // Table Header
+        echo '<tr>';
+        echo '<th class="header-cell">S</th>';
+        echo '<th class="header-cell">PLAYER CODE</th>';
+        echo '<th class="header-cell">PLAYER NAME</th>';
+        echo '<th class="header-cell">SPORT</th>';
+        echo '<th class="header-cell">TOTAL CLASSES</th>';
+        echo '<th class="header-cell">USED CLASSES (RED)</th>';
+        echo '<th class="header-cell">REMAINING CLASSES (GREEN)</th>';
+        echo '<th class="header-cell">ATTENDANCE STATUS</th>';
+        echo '<th class="header-cell">PLAYER STATUS</th>';
+        echo '</tr>';
 
         $sr = 1;
-        foreach ($att_records as $a) {
-            fputcsv($output, array(
-                $sr++,
-                $a['attendance_date'],
-                $a['entry_time'],
-                $a['period'],
-                $a['player_code'],
-                $a['player_name'],
-                $a['sport'],
-                $a['classes_used'],
-                'Present',
-                $a['status'],
-                $a['remaining_classes'],
-                'Verified Session'
-            ));
-        }
+        if (!empty($players)) {
+            foreach ($players as $p) {
+                $p_id = intval($p['id']);
+                $total = intval($p['total_classes']);
+                $rem   = intval($p['remaining_classes']);
+                $used  = max(0, $total - $rem);
+                $isPresent = in_array($p_id, $present_player_ids, true);
 
-        // Include Absent Players List
-        foreach ($players as $p) {
-            if (!in_array(intval($p['id']), $present_player_ids, true)) {
-                fputcsv($output, array(
-                    $sr++,
-                    $start_date,
-                    'N/A',
-                    'N/A',
-                    $p['player_code'],
-                    $p['player_name'],
-                    $p['sport'],
-                    0,
-                    'Absent',
-                    $p['status'],
-                    $p['remaining_classes'],
-                    'No session recorded in date range'
-                ));
+                echo '<tr>';
+                echo '<td class="center-cell">' . $sr++ . '</td>';
+                echo '<td class="center-cell">' . esc_html($p['player_code']) . '</td>';
+                echo '<td class="text-cell">' . esc_html(mb_strtoupper($p['player_name'], 'UTF-8')) . '</td>';
+                echo '<td class="text-cell">' . esc_html(mb_strtoupper($p['sport'], 'UTF-8')) . '</td>';
+                echo '<td class="center-cell"><strong>' . $total . '</strong></td>';
+                echo '<td class="used-cell">USED: ' . $used . '</td>';
+                echo '<td class="rem-cell">REMAINING: ' . $rem . '</td>';
+                echo '<td class="center-cell">' . ($isPresent ? 'PRESENT TODAY' : 'ABSENT TODAY') . '</td>';
+                echo '<td class="center-cell">' . esc_html(mb_strtoupper($p['status'], 'UTF-8')) . '</td>';
+                echo '</tr>';
             }
+        } else {
+            echo '<tr><td colspan="9" class="center-cell" style="padding: 20px;">NO PLAYERS ASSIGNED TO THIS COACH.</td></tr>';
         }
 
-        fclose($output);
+        echo '</table></body></html>';
         exit;
     }
 
-    // Export Complete All Coaches Report
+    // Export Complete All Coaches Executive Report
     public function handle_export_all_coaches_report() {
         check_ajax_referer('sportedia_nonce', 'nonce');
 
@@ -804,36 +885,72 @@ class Sportedia_Secondary_Manager {
         global $wpdb;
         $coaches = self::get_coaches('', $start_date, $end_date);
 
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename=Complete_Coaches_Management_Report_' . $start_date . '_to_' . $end_date . '.csv');
+        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+        header('Content-Disposition: attachment; filename=Complete_Coaches_Report_' . $start_date . '_to_' . $end_date . '.xls');
 
-        $output = fopen('php://output', 'w');
-        fputs($output, "\xEF\xBB\xBF"); // UTF-8 BOM
+        echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+        echo '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">';
+        echo '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>';
+        echo '<x:Name>All Coaches Executive Summary</x:Name>';
+        echo '<x:WorksheetOptions><x:DisplayGridlines/><x:Print><x:ValidPrinterInfo/><x:PaperSizeIndex>9</x:PaperSizeIndex><x:Scale>100</x:Scale><x:FitWidth>1</x:FitWidth><x:FitHeight>0</x:FitHeight></x:Print><x:Selected/><x:FreezePanes/><x:FrozenNoSplit/><x:SplitHorizontal>5</x:SplitHorizontal><x:TopRowBottomPane>5</x:TopRowBottomPane><x:ActivePane>2</x:ActivePane></x:WorksheetOptions>';
+        echo '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
+        echo '<style>';
+        echo 'body { font-family: "Calibri", "Segoe UI", Arial, sans-serif; font-size: 11pt; }';
+        echo 'table { border-collapse: collapse; width: 100%; table-layout: fixed; }';
+        echo 'th, td { border: 0.5pt solid #CBD5E1; padding: 8px; font-size: 10pt; vertical-align: middle; }';
+        echo '.title-row { background-color: #0F172A; color: #FFFFFF; font-size: 16pt; font-weight: bold; text-align: center; height: 40px; }';
+        echo '.subtitle-row { background-color: #1E293B; color: #F8FAFC; font-size: 11pt; font-weight: bold; text-align: center; height: 28px; }';
+        echo '.header-cell { background-color: #0284C7; color: #FFFFFF; font-weight: bold; text-align: center; height: 32px; font-size: 10pt; }';
+        echo '.text-cell { text-align: left; mso-number-format:"\@"; }';
+        echo '.center-cell { text-align: center; mso-number-format:"\@"; }';
+        echo '</style></head><body>';
 
-        // Executive Summary
-        fputcsv($output, array('ALL COACHES EXECUTIVE SUMMARY REPORT'));
-        fputcsv($output, array('Reporting Period', $start_date . ' to ' . $end_date));
-        fputcsv($output, array('Total Coaches', count($coaches)));
-        fputcsv($output, array('Generated Date', date('Y-m-d H:i:s')));
-        fputcsv($output, array('')); // Blank row
+        echo '<table>';
+        echo '<col style="width: 50px;">';  // A: S
+        echo '<col style="width: 180px;">'; // B: COACH NAME
+        echo '<col style="width: 130px;">'; // C: BRANCH
+        echo '<col style="width: 130px;">'; // D: SPORT
+        echo '<col style="width: 120px;">'; // E: MOBILE
+        echo '<col style="width: 110px;">'; // F: TOTAL PLAYERS
+        echo '<col style="width: 110px;">'; // G: PRESENT
+        echo '<col style="width: 110px;">'; // H: ABSENT
+        echo '<col style="width: 130px;">'; // I: SESSIONS
+        echo '<col style="width: 130px;">'; // J: ATTENDANCE RATE
 
-        // Summary Table Header
-        fputcsv($output, array('Coach Name', 'Branch', 'Mobile Number', 'Total Players', 'Present', 'Absent', 'Sessions Conducted', 'Attendance Rate (%)'));
+        echo '<tr><td colspan="10" class="title-row">SPORTEDIA ACADEMY — ALL COACHES MANAGEMENT REPORT</td></tr>';
+        echo '<tr><td colspan="10" class="subtitle-row">REPORTING PERIOD: ' . esc_html($start_date) . ' TO ' . esc_html($end_date) . ' | TOTAL COACHES: ' . count($coaches) . '</td></tr>';
+        echo '<tr><td colspan="10" style="height: 8px; border: none;"></td></tr>';
 
+        echo '<tr>';
+        echo '<th class="header-cell">S</th>';
+        echo '<th class="header-cell">COACH NAME</th>';
+        echo '<th class="header-cell">BRANCH</th>';
+        echo '<th class="header-cell">SPORT</th>';
+        echo '<th class="header-cell">MOBILE NUMBER</th>';
+        echo '<th class="header-cell">TOTAL PLAYERS</th>';
+        echo '<th class="header-cell">PRESENT TODAY</th>';
+        echo '<th class="header-cell">ABSENT TODAY</th>';
+        echo '<th class="header-cell">SESSIONS CONDUCTED</th>';
+        echo '<th class="header-cell">ATTENDANCE RATE (%)</th>';
+        echo '</tr>';
+
+        $sr = 1;
         foreach ($coaches as $c) {
-            fputcsv($output, array(
-                $c['coach_name'],
-                $c['branch'],
-                $c['mobile_number'] ? $c['mobile_number'] : 'N/A',
-                $c['total_players'],
-                $c['present_players'],
-                $c['absent_players'],
-                $c['completed_sessions'],
-                $c['attendance_rate'] . '%'
-            ));
+            echo '<tr>';
+            echo '<td class="center-cell">' . $sr++ . '</td>';
+            echo '<td class="text-cell">' . esc_html(mb_strtoupper($c['coach_name'], 'UTF-8')) . '</td>';
+            echo '<td class="text-cell">' . esc_html(mb_strtoupper($c['branch'], 'UTF-8')) . '</td>';
+            echo '<td class="text-cell">' . esc_html(mb_strtoupper($c['sport'], 'UTF-8')) . '</td>';
+            echo '<td class="center-cell">' . esc_html($c['mobile_number'] ? $c['mobile_number'] : 'N/A') . '</td>';
+            echo '<td class="center-cell"><strong>' . $c['total_players'] . '</strong></td>';
+            echo '<td class="center-cell" style="color: #16A34A; font-weight: bold;">' . $c['present_players'] . '</td>';
+            echo '<td class="center-cell" style="color: #DC2626; font-weight: bold;">' . $c['absent_players'] . '</td>';
+            echo '<td class="center-cell"><strong>' . $c['completed_sessions'] . '</strong></td>';
+            echo '<td class="center-cell" style="color: #166534; font-weight: bold;">' . $c['attendance_rate'] . '%</td>';
+            echo '</tr>';
         }
 
-        fclose($output);
+        echo '</table></body></html>';
         exit;
     }
 
@@ -981,7 +1098,7 @@ class Sportedia_Secondary_Manager {
         exit;
     }
 
-    // Export Attendance CSV
+    // Export Attendance Corporate Excel Workbook
     public function handle_export_attendance() {
         check_ajax_referer('sportedia_nonce', 'nonce');
 
@@ -992,34 +1109,80 @@ class Sportedia_Secondary_Manager {
         $table = $wpdb->prefix . 'sportedia_sec_attendance';
         $records = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE attendance_date = %s ORDER BY id ASC", $date), ARRAY_A);
 
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename=Secondary_Attendance_Report_' . $date . '.csv');
+        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+        header('Content-Disposition: attachment; filename=Secondary_Attendance_Report_' . $date . '.xls');
 
-        $output = fopen('php://output', 'w');
-        fputs($output, "\xEF\xBB\xBF"); // UTF-8 BOM
+        echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+        echo '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">';
+        echo '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>';
+        echo '<x:Name>Attendance Report</x:Name>';
+        echo '<x:WorksheetOptions><x:DisplayGridlines/><x:Print><x:ValidPrinterInfo/><x:PaperSizeIndex>9</x:PaperSizeIndex><x:Scale>100</x:Scale><x:FitWidth>1</x:FitWidth><x:FitHeight>0</x:FitHeight></x:Print><x:Selected/><x:FreezePanes/><x:FrozenNoSplit/><x:SplitHorizontal>5</x:SplitHorizontal><x:TopRowBottomPane>5</x:TopRowBottomPane><x:ActivePane>2</x:ActivePane></x:WorksheetOptions>';
+        echo '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
+        echo '<style>';
+        echo 'body { font-family: "Calibri", "Segoe UI", Arial, sans-serif; font-size: 11pt; }';
+        echo 'table { border-collapse: collapse; width: 100%; table-layout: fixed; }';
+        echo 'th, td { border: 0.5pt solid #CBD5E1; padding: 8px; font-size: 10pt; vertical-align: middle; }';
+        echo '.title-row { background-color: #0F172A; color: #FFFFFF; font-size: 16pt; font-weight: bold; text-align: center; height: 40px; }';
+        echo '.subtitle-row { background-color: #1E293B; color: #F8FAFC; font-size: 11pt; font-weight: bold; text-align: center; height: 28px; }';
+        echo '.header-cell { background-color: #0284C7; color: #FFFFFF; font-weight: bold; text-align: center; height: 32px; font-size: 10pt; }';
+        echo '.text-cell { text-align: left; mso-number-format:"\@"; }';
+        echo '.center-cell { text-align: center; mso-number-format:"\@"; }';
+        echo '.rem-cell { text-align: center; background-color: #DCFCE7; color: #16A34A; font-weight: bold; }';
+        echo '</style></head><body>';
 
-        fputcsv($output, array('Serial No.', 'Date', 'Entry Time', 'Period/Time Slot', 'Player Code', 'Player Name', 'Sport', 'Coach Name', 'Classes Used', 'Remaining Classes', 'Session Status', 'Branch', 'Created At'));
+        echo '<table>';
+        echo '<col style="width: 50px;">';  // A: S
+        echo '<col style="width: 100px;">'; // B: DATE
+        echo '<col style="width: 90px;">';  // C: TIME
+        echo '<col style="width: 90px;">';  // D: PERIOD
+        echo '<col style="width: 110px;">'; // E: PLAYER CODE
+        echo '<col style="width: 180px;">'; // F: PLAYER NAME
+        echo '<col style="width: 130px;">'; // G: SPORT
+        echo '<col style="width: 160px;">'; // H: COACH NAME
+        echo '<col style="width: 110px;">'; // I: DEDUCTED
+        echo '<col style="width: 130px;">'; // J: REMAINING
+        echo '<col style="width: 110px;">'; // K: BRANCH
+
+        echo '<tr><td colspan="11" class="title-row">SPORTEDIA ACADEMY — DAILY PLAYER ATTENDANCE REPORT</td></tr>';
+        echo '<tr><td colspan="11" class="subtitle-row">ATTENDANCE DATE: ' . esc_html($date) . ' | TOTAL SESSIONS DEDUCTED: ' . count($records) . '</td></tr>';
+        echo '<tr><td colspan="11" style="height: 8px; border: none;"></td></tr>';
+
+        echo '<tr>';
+        echo '<th class="header-cell">S</th>';
+        echo '<th class="header-cell">DATE</th>';
+        echo '<th class="header-cell">TIME</th>';
+        echo '<th class="header-cell">PERIOD</th>';
+        echo '<th class="header-cell">PLAYER CODE</th>';
+        echo '<th class="header-cell">PLAYER NAME</th>';
+        echo '<th class="header-cell">SPORT</th>';
+        echo '<th class="header-cell">COACH NAME</th>';
+        echo '<th class="header-cell">CLASSES USED</th>';
+        echo '<th class="header-cell">REMAINING BALANCE</th>';
+        echo '<th class="header-cell">BRANCH</th>';
+        echo '</tr>';
 
         $sr = 1;
-        foreach ($records as $r) {
-            fputcsv($output, array(
-                $sr++,
-                $r['attendance_date'],
-                $r['entry_time'],
-                $r['period'],
-                $r['player_code'],
-                $r['player_name'],
-                $r['sport'],
-                $r['coach_name'],
-                $r['classes_used'],
-                $r['remaining_classes'],
-                $r['status'],
-                $r['branch'],
-                $r['created_at']
-            ));
+        if (!empty($records)) {
+            foreach ($records as $r) {
+                echo '<tr>';
+                echo '<td class="center-cell">' . $sr++ . '</td>';
+                echo '<td class="center-cell">' . esc_html($r['attendance_date']) . '</td>';
+                echo '<td class="center-cell">' . esc_html($r['entry_time']) . '</td>';
+                echo '<td class="center-cell">' . esc_html($r['period']) . '</td>';
+                echo '<td class="center-cell">' . esc_html($r['player_code']) . '</td>';
+                echo '<td class="text-cell">' . esc_html(mb_strtoupper($r['player_name'], 'UTF-8')) . '</td>';
+                echo '<td class="text-cell">' . esc_html(mb_strtoupper($r['sport'], 'UTF-8')) . '</td>';
+                echo '<td class="text-cell">' . esc_html(mb_strtoupper($r['coach_name'], 'UTF-8')) . '</td>';
+                echo '<td class="center-cell"><strong>' . intval($r['classes_used']) . '</strong></td>';
+                echo '<td class="rem-cell">REMAINING: ' . intval($r['remaining_classes']) . '</td>';
+                echo '<td class="text-cell">' . esc_html(mb_strtoupper($r['branch'], 'UTF-8')) . '</td>';
+                echo '</tr>';
+            }
+        } else {
+            echo '<tr><td colspan="11" class="center-cell" style="padding: 20px;">NO ATTENDANCE SESSIONS RECORDED FOR THIS DATE.</td></tr>';
         }
 
-        fclose($output);
+        echo '</table></body></html>';
         exit;
     }
 }
