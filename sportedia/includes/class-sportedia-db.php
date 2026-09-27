@@ -153,6 +153,7 @@ class Sportedia_DB {
         $sql_sec_coaches = "CREATE TABLE $table_sec_coaches (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             coach_name varchar(191) NOT NULL,
+            mobile_number varchar(50) DEFAULT '' NOT NULL,
             sport varchar(100) DEFAULT 'General' NOT NULL,
             branch varchar(100) DEFAULT 'Main' NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -161,7 +162,20 @@ class Sportedia_DB {
             UNIQUE KEY coach_name (coach_name)
         ) $charset_collate;";
 
-        // 10. Secondary Attendance & Session Tracking Table
+        // 10. Secondary Branches Table (Completely Independent from Main Dashboard)
+        $table_sec_branches = $wpdb->prefix . 'sportedia_sec_branches';
+        $sql_sec_branches = "CREATE TABLE $table_sec_branches (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            branch_name varchar(191) NOT NULL,
+            code varchar(50) DEFAULT '' NOT NULL,
+            status varchar(20) DEFAULT 'active' NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY (id),
+            UNIQUE KEY branch_name (branch_name)
+        ) $charset_collate;";
+
+        // 11. Secondary Attendance & Session Tracking Table
         $table_sec_attendance = $wpdb->prefix . 'sportedia_sec_attendance';
         $sql_sec_attendance = "CREATE TABLE $table_sec_attendance (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -186,7 +200,7 @@ class Sportedia_DB {
             KEY period (period)
         ) $charset_collate;";
 
-        // 11. Secondary End-of-Day Daily Reports Table
+        // 12. Secondary End-of-Day Daily Reports Table
         $table_sec_daily_reports = $wpdb->prefix . 'sportedia_sec_daily_reports';
         $sql_sec_daily_reports = "CREATE TABLE $table_sec_daily_reports (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -208,7 +222,7 @@ class Sportedia_DB {
             UNIQUE KEY report_date_branch (report_date, branch)
         ) $charset_collate;";
 
-        // 12. Secondary End-of-Day Excel Records Table
+        // 13. Secondary End-of-Day Excel Records Table
         $table_sec_eod_records = $wpdb->prefix . 'sportedia_sec_eod_records';
         $sql_sec_eod_records = "CREATE TABLE $table_sec_eod_records (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -241,6 +255,7 @@ class Sportedia_DB {
 
         dbDelta($sql_sec_players);
         dbDelta($sql_sec_coaches);
+        dbDelta($sql_sec_branches);
         dbDelta($sql_sec_attendance);
         dbDelta($sql_sec_daily_reports);
         dbDelta($sql_sec_eod_records);
