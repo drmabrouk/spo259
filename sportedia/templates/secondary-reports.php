@@ -12,6 +12,31 @@ $eod_table = $wpdb->prefix . 'sportedia_sec_eod_records';
 $existing_rep = $wpdb->get_row($wpdb->prepare("SELECT * FROM $rep_table WHERE report_date = %s AND branch = %s", $report_date, $branch_name), ARRAY_A);
 $eod_items    = $wpdb->get_results($wpdb->prepare("SELECT * FROM $eod_table WHERE report_date = %s ORDER BY serial_no ASC, id ASC", $report_date), ARRAY_A);
 
+$saved_selected_notes = array();
+if ($existing_rep && !empty($existing_rep['selected_notes'])) {
+    $decoded = json_decode($existing_rep['selected_notes'], true);
+    if (is_array($decoded)) {
+        $saved_selected_notes = $decoded;
+    }
+}
+
+$predefined_notes_options = array(
+    'All staff and coaches were present today.',
+    'All scheduled staff members were present today.',
+    'Several customers/parents were contacted regarding their previous subscriptions.',
+    'Former customers/parents were contacted and encouraged to renew their subscriptions.',
+    'Follow-up was completed with customers whose subscriptions had expired.',
+    'Follow-up was completed with absent players and their parents.',
+    'Parents were contacted regarding missed sessions and attendance.',
+    'Follow-up was conducted with inactive players.',
+    'Several new customer inquiries were received today.',
+    'Customer inquiries were followed up and addressed today.',
+    'Registration and renewal follow-ups were completed today.',
+    'Additional follow-up is required with inactive customers.',
+    'Make-up sessions were discussed with absent players/parents.',
+    'No operational issues were reported today.'
+);
+
 $export_nonce = wp_create_nonce('sportedia_nonce');
 ?>
 
@@ -64,7 +89,7 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
             <h3 style="margin:0; font-size: 16px; font-weight: 700; color: #16a34a; display: flex; align-items: center; gap: 6px;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-                1. WhatsApp Daily Report System
+                1. WhatsApp Daily Report Generator
             </h3>
             <span class="sp-badge" style="background:#dcfce7; color:#15803d;">Saved Record</span>
         </div>
@@ -109,23 +134,49 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
                 </div>
             </div>
 
-            <div class="sp-form-group">
-                <input type="text" id="rep_staff_status" name="staff_status" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['staff_status'] : 'All staff and coaches are present.'); ?>" oninput="buildWaMessage()">
-                <label for="rep_staff_status" class="sp-floating-label">Staff & Coaches Status</label>
+            <!-- DEDICATED PLAYER ABSENCE FIELDS -->
+            <div style="background: #f8fafc; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+                <label style="font-size: 11px; font-weight: 700; color: var(--sp-text-muted); display: block; margin-bottom: 8px;">PLAYER ABSENCE TRACKING</label>
+                <div class="sp-grid-2">
+                    <div class="sp-form-group" style="margin-bottom:0;">
+                        <input type="number" id="rep_bball_abs" name="basketball_absences_count" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['basketball_absences_count'] : 3); ?>" oninput="buildWaMessage()">
+                        <label for="rep_bball_abs" class="sp-floating-label">🏀 Basketball Player Absences</label>
+                    </div>
+
+                    <div class="sp-form-group" style="margin-bottom:0;">
+                        <input type="number" id="rep_swim_abs" name="swimming_absences_count" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['swimming_absences_count'] : 6); ?>" oninput="buildWaMessage()">
+                        <label for="rep_swim_abs" class="sp-floating-label">🏊‍♂️ Swimming Player Absences</label>
+                    </div>
+                </div>
             </div>
 
             <div class="sp-form-group">
-                <input type="number" id="rep_absences" name="player_absences_count" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['player_absences_count'] : 9); ?>" oninput="buildWaMessage()">
-                <label for="rep_absences" class="sp-floating-label">Player Absences Count</label>
+                <input type="text" id="rep_staff_status" name="staff_status" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['staff_status'] : 'All staff and coaches were present today.'); ?>" oninput="buildWaMessage()">
+                <label for="rep_staff_status" class="sp-floating-label">Staff & Coaches Status</label>
+            </div>
+
+            <!-- PREDEFINED SELECTABLE NOTES -->
+            <div style="margin-bottom: 14px;">
+                <label style="font-size: 12px; font-weight: 700; color: var(--sp-text-main); display: block; margin-bottom: 8px;">Selectable Professional Notes / Daily Status (Multi-select)</label>
+                <div style="background: #f8fafc; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 10px; max-height: 160px; overflow-y: auto;">
+                    <?php foreach ($predefined_notes_options as $idx => $note_text) :
+                        $isChecked = in_array($note_text, $saved_selected_notes, true);
+                    ?>
+                        <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--sp-text-main); margin-bottom: 6px; cursor: pointer;">
+                            <input type="checkbox" name="selected_notes[]" class="wa-note-checkbox" value="<?php echo esc_attr($note_text); ?>" <?php checked($isChecked); ?> onchange="buildWaMessage()">
+                            <span><?php echo esc_html($note_text); ?></span>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
             </div>
 
             <div class="sp-form-group">
                 <textarea id="rep_recs" name="recommendations" class="sp-floating-input" style="height: 50px;" oninput="buildWaMessage()"><?php echo esc_textarea($existing_rep ? $existing_rep['recommendations'] : 'Follow up with absent players to check status and encourage session makeup.'); ?></textarea>
-                <label for="rep_recs" class="sp-floating-label">Recommendations & Notes</label>
+                <label for="rep_recs" class="sp-floating-label">Additional Custom Notes</label>
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button type="submit" class="sp-btn sp-btn-primary">Save Daily WhatsApp Inputs</button>
+                <button type="submit" class="sp-btn sp-btn-primary">Save Report</button>
             </div>
         </form>
     </div>
@@ -134,13 +185,19 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
     <div class="sp-card" style="margin-bottom:0; display: flex; flex-direction: column; justify-content: space-between;">
         <div>
             <h3 style="margin-top:0; font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--sp-text-primary);">WhatsApp Formatted Statement Preview</h3>
-            <div id="waPreviewBox" style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #111827; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 12.5px; white-space: pre-wrap; line-height: 1.5; min-height: 280px; font-weight: 500;">
+            <div id="waPreviewBox" style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #111827; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 12.5px; white-space: pre-wrap; line-height: 1.5; min-height: 320px; font-weight: 500;">
             </div>
         </div>
 
-        <div style="margin-top: 16px; display: flex; gap: 10px; justify-content: flex-end;">
+        <div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+            <button type="button" class="sp-btn sp-btn-secondary" onclick="jQuery('#rep_new_regs').focus()">
+                Edit Report
+            </button>
             <button type="button" class="sp-btn sp-btn-primary" style="background-color: #16a34a; border-color: #16a34a;" onclick="copyWaText()">
-                Copy WhatsApp Text
+                Copy Report
+            </button>
+            <button type="button" class="sp-btn sp-btn-primary" style="background-color: #25d366; border-color: #25d366;" onclick="openWhatsAppDirect()">
+                Open WhatsApp
             </button>
         </div>
     </div>
@@ -328,24 +385,44 @@ function buildWaMessage() {
     var caps     = jQuery('#rep_caps').val() || '0';
     var cashPay  = parseFloat(jQuery('#rep_cash_pay').val()) || 0;
     var capsTot  = parseFloat(jQuery('#rep_caps_total').val()) || 0;
-    var staff    = jQuery('#rep_staff_status').val() || 'All staff and coaches are present.';
-    var abs      = jQuery('#rep_absences').val() || '0';
-    var recs     = jQuery('#rep_recs').val() || '';
+    var staff    = jQuery('#rep_staff_status').val() || 'All staff and coaches were present today.';
+
+    var bballAbs = jQuery('#rep_bball_abs').val() || '0';
+    var swimAbs  = jQuery('#rep_swim_abs').val() || '0';
+
+    var selectedNotes = [];
+    jQuery('.wa-note-checkbox:checked').each(function() {
+        selectedNotes.push(jQuery(this).val());
+    });
+
+    var customNote = jQuery('#rep_recs').val() || '';
 
     var totalInc = cardPay + cashPay + capsTot;
 
-    var txt = "📍 *" + branch + " | Swimming Academy*\n" +
-              "🗓️ *" + formattedDate + ".*\n\n" +
-              "📝 NEW SWIMMING REG : *" + newRegs + "*.\n" +
-              "💳 CARD Payment : *" + cardPay.toFixed(0) + " AED*.\n" +
-              "📝 RENEWAL FOR SWIMMING : *" + renewals + "*.\n\n" +
-              "📝 Swimming Cap : *" + caps + "*.\n" +
-              "💳 CASH : *" + cashPay.toFixed(0) + " AED*.\n\n" +
-              "TOTAL CAPS : *" + capsTot.toFixed(0) + " AED*.\n\n" +
-              "👨‍🏫 *Staff & Coaches Status:* " + staff + "\n\n" +
-              "🏊‍♂️ *Players Absences:* Total absent players: *" + abs + "*.\n\n" +
-              "💡 *Recommendations:*\n" + recs + "\n\n" +
-              "Total Income today : *" + totalInc.toFixed(0) + " AED*.";
+    var txt = "📍 *" + branch + " | Sports Academy*\n" +
+              "🗓️ *" + formattedDate + "*\n\n" +
+              "📝 NEW REGISTRATIONS: *" + newRegs + "*\n" +
+              "📝 RENEWALS: *" + renewals + "*\n\n" +
+              "💳 CARD PAYMENT: *" + cardPay.toFixed(0) + " AED*\n" +
+              "💵 CASH PAYMENT: *" + cashPay.toFixed(0) + " AED*\n\n" +
+              "📝 Swimming Cap: *" + caps + "*\n" +
+              "TOTAL CAPS: *" + capsTot.toFixed(0) + " AED*\n\n" +
+              "🏀 *BASKETBALL PLAYER ABSENCES:* *" + bballAbs + "*\n" +
+              "🏊‍♂️ *SWIMMING PLAYER ABSENCES:* *" + swimAbs + "*\n\n" +
+              "👨‍🏫 *STAFF & COACHES STATUS:*\n" + staff + "\n\n";
+
+    if (selectedNotes.length > 0 || customNote.trim() !== '') {
+        txt += "📝 *DAILY NOTES & FOLLOW-UP:*\n";
+        selectedNotes.forEach(function(note) {
+            txt += "• " + note + "\n";
+        });
+        if (customNote.trim() !== '') {
+            txt += "💡 " + customNote.trim() + "\n";
+        }
+        txt += "\n";
+    }
+
+    txt += "💰 *TOTAL INCOME TODAY:* *" + totalInc.toFixed(0) + " AED*";
 
     jQuery('#waPreviewBox').text(txt);
 }
@@ -353,8 +430,14 @@ function buildWaMessage() {
 function copyWaText() {
     var text = jQuery('#waPreviewBox').text();
     navigator.clipboard.writeText(text).then(function() {
-        alert('WhatsApp formatted message copied to clipboard!');
+        alert('WhatsApp formatted report copied to clipboard!');
     });
+}
+
+function openWhatsAppDirect() {
+    var text = jQuery('#waPreviewBox').text();
+    var url = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(text);
+    window.open(url, '_blank');
 }
 
 function openEodItemModal() {
@@ -402,7 +485,7 @@ jQuery('#spSecRepForm').on('submit', function(e) {
     var formData = jQuery(this).serialize() + '&action=sportedia_sec_save_daily_report&nonce=' + sportedia_vars.nonce;
     jQuery.post(sportedia_vars.ajax_url, formData, function(res) {
         if (res.success) {
-            alert(res.data.message || 'Saved!');
+            alert(res.data.message || 'Report saved successfully!');
             location.reload();
         } else {
             alert(res.data || 'Error saving report.');
