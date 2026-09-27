@@ -656,6 +656,16 @@ class Sportedia_Secondary_Manager {
         $caps_total    = floatval($_POST['total_caps_amount']);
         $staff_status  = sanitize_text_field($_POST['staff_status']);
         $absences      = intval($_POST['player_absences_count']);
+        $bball_abs     = isset($_POST['basketball_absences_count']) ? intval($_POST['basketball_absences_count']) : 0;
+        $swim_abs      = isset($_POST['swimming_absences_count']) ? intval($_POST['swimming_absences_count']) : 0;
+
+        $sel_notes_raw = isset($_POST['selected_notes']) ? $_POST['selected_notes'] : array();
+        if (is_array($sel_notes_raw)) {
+            $sel_notes = json_encode(array_map('sanitize_text_field', $sel_notes_raw));
+        } else {
+            $sel_notes = sanitize_text_field($sel_notes_raw);
+        }
+
         $recs          = sanitize_textarea_field($_POST['recommendations']);
 
         $total_income  = $card_payments + $cash_payments + $caps_total;
@@ -667,18 +677,21 @@ class Sportedia_Secondary_Manager {
         $existing = $wpdb->get_var($wpdb->prepare("SELECT id FROM $table WHERE report_date = %s AND branch = %s", $report_date, $branch));
 
         $data = array(
-            'report_date'           => $report_date,
-            'branch'                => !empty($branch) ? $branch : 'ISCS MUW',
-            'new_registrations'     => $new_regs,
-            'card_payments'         => $card_payments,
-            'renewals'              => $renewals,
-            'caps_count'            => $caps_count,
-            'cash_payments'         => $cash_payments,
-            'total_caps_amount'     => $caps_total,
-            'staff_status'          => !empty($staff_status) ? $staff_status : 'All staff and coaches are present.',
-            'player_absences_count' => $absences,
-            'recommendations'       => $recs,
-            'total_income'          => $total_income
+            'report_date'               => $report_date,
+            'branch'                    => !empty($branch) ? $branch : 'ISCS MUW',
+            'new_registrations'         => $new_regs,
+            'card_payments'             => $card_payments,
+            'renewals'                  => $renewals,
+            'caps_count'                => $caps_count,
+            'cash_payments'             => $cash_payments,
+            'total_caps_amount'         => $caps_total,
+            'staff_status'              => !empty($staff_status) ? $staff_status : 'All staff and coaches are present.',
+            'player_absences_count'     => $absences,
+            'basketball_absences_count' => $bball_abs,
+            'swimming_absences_count'   => $swim_abs,
+            'selected_notes'            => $sel_notes,
+            'recommendations'           => $recs,
+            'total_income'              => $total_income
         );
 
         if ($existing) {
