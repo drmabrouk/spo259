@@ -23,6 +23,10 @@ if ($existing_rep && !empty($existing_rep['selected_notes'])) {
 $predefined_notes_options = array(
     'All staff and coaches were present today.',
     'All scheduled staff members were present today.',
+    'All coaches were present today.',
+    'Some staff members were absent today.',
+    'Some coaches were absent today.',
+    'Staff attendance was completed without operational issues.',
     'Several customers/parents were contacted regarding their previous subscriptions.',
     'Former customers/parents were contacted and encouraged to renew their subscriptions.',
     'Follow-up was completed with customers whose subscriptions had expired.',
@@ -100,37 +104,37 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
 
             <div class="sp-grid-2">
                 <div class="sp-form-group">
-                    <input type="number" id="rep_new_regs" name="new_registrations" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['new_registrations'] : 1); ?>" oninput="buildWaMessage()">
+                    <input type="number" id="rep_new_regs" name="new_registrations" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['new_registrations'] : ''); ?>" oninput="buildWaMessage()">
                     <label for="rep_new_regs" class="sp-floating-label">New Registrations</label>
                 </div>
 
                 <div class="sp-form-group">
-                    <input type="number" step="0.01" id="rep_card_pay" name="card_payments" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['card_payments'] : '2205.00'); ?>" oninput="buildWaMessage()">
-                    <label for="rep_card_pay" class="sp-floating-label">Card Payments (AED)</label>
-                </div>
-            </div>
-
-            <div class="sp-grid-2">
-                <div class="sp-form-group">
-                    <input type="number" id="rep_renewals" name="renewals" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['renewals'] : 2); ?>" oninput="buildWaMessage()">
+                    <input type="number" id="rep_renewals" name="renewals" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['renewals'] : ''); ?>" oninput="buildWaMessage()">
                     <label for="rep_renewals" class="sp-floating-label">Renewals Count</label>
                 </div>
-
-                <div class="sp-form-group">
-                    <input type="number" id="rep_caps" name="caps_count" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['caps_count'] : 1); ?>" oninput="buildWaMessage()">
-                    <label for="rep_caps" class="sp-floating-label">Swimming Caps Count</label>
-                </div>
             </div>
 
             <div class="sp-grid-2">
                 <div class="sp-form-group">
-                    <input type="number" step="0.01" id="rep_cash_pay" name="cash_payments" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['cash_payments'] : '25.00'); ?>" oninput="buildWaMessage()">
-                    <label for="rep_cash_pay" class="sp-floating-label">Cash Payments (AED)</label>
+                    <input type="number" step="0.01" id="rep_cash_pay" name="cash_payments" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['cash_payments'] : ''); ?>" oninput="buildWaMessage()">
+                    <label for="rep_cash_pay" class="sp-floating-label">TOTAL CASH (AED)</label>
                 </div>
 
                 <div class="sp-form-group">
-                    <input type="number" step="0.01" id="rep_caps_total" name="total_caps_amount" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['total_caps_amount'] : '25.00'); ?>" oninput="buildWaMessage()">
-                    <label for="rep_caps_total" class="sp-floating-label">Total Caps Amount (AED)</label>
+                    <input type="number" step="0.01" id="rep_card_pay" name="card_payments" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['card_payments'] : ''); ?>" oninput="buildWaMessage()">
+                    <label for="rep_card_pay" class="sp-floating-label">TOTAL CARD (AED)</label>
+                </div>
+            </div>
+
+            <!-- CAP QUANTITY CALCULATION SECTION -->
+            <div style="background: #f8fafc; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label style="font-size: 11px; font-weight: 700; color: var(--sp-text-muted);">SWIMMING CAP SALES (25 AED / CAP)</label>
+                    <span id="caps_calc_preview" style="font-size: 12px; font-weight: bold; color: var(--sp-primary-color);">Total: 0 AED</span>
+                </div>
+                <div class="sp-form-group" style="margin-bottom:0;">
+                    <input type="number" id="rep_caps" name="caps_count" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['caps_count'] : ''); ?>" placeholder=" " oninput="updateCapCalc(); buildWaMessage();">
+                    <label for="rep_caps" class="sp-floating-label">Cap Quantity</label>
                 </div>
             </div>
 
@@ -139,26 +143,21 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
                 <label style="font-size: 11px; font-weight: 700; color: var(--sp-text-muted); display: block; margin-bottom: 8px;">PLAYER ABSENCE TRACKING</label>
                 <div class="sp-grid-2">
                     <div class="sp-form-group" style="margin-bottom:0;">
-                        <input type="number" id="rep_bball_abs" name="basketball_absences_count" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['basketball_absences_count'] : 3); ?>" oninput="buildWaMessage()">
+                        <input type="number" id="rep_bball_abs" name="basketball_absences_count" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['basketball_absences_count'] : ''); ?>" oninput="buildWaMessage()">
                         <label for="rep_bball_abs" class="sp-floating-label">🏀 Basketball Player Absences</label>
                     </div>
 
                     <div class="sp-form-group" style="margin-bottom:0;">
-                        <input type="number" id="rep_swim_abs" name="swimming_absences_count" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['swimming_absences_count'] : 6); ?>" oninput="buildWaMessage()">
+                        <input type="number" id="rep_swim_abs" name="swimming_absences_count" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['swimming_absences_count'] : ''); ?>" oninput="buildWaMessage()">
                         <label for="rep_swim_abs" class="sp-floating-label">🏊‍♂️ Swimming Player Absences</label>
                     </div>
                 </div>
             </div>
 
-            <div class="sp-form-group">
-                <input type="text" id="rep_staff_status" name="staff_status" class="sp-floating-input" value="<?php echo esc_attr($existing_rep ? $existing_rep['staff_status'] : 'All staff and coaches were present today.'); ?>" oninput="buildWaMessage()">
-                <label for="rep_staff_status" class="sp-floating-label">Staff & Coaches Status</label>
-            </div>
-
-            <!-- PREDEFINED SELECTABLE NOTES -->
+            <!-- PREDEFINED SELECTABLE NOTES (Includes Staff/Coach Status) -->
             <div style="margin-bottom: 14px;">
-                <label style="font-size: 12px; font-weight: 700; color: var(--sp-text-main); display: block; margin-bottom: 8px;">Selectable Professional Notes / Daily Status (Multi-select)</label>
-                <div style="background: #f8fafc; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 10px; max-height: 160px; overflow-y: auto;">
+                <label style="font-size: 12px; font-weight: 700; color: var(--sp-text-main); display: block; margin-bottom: 8px;">Professional Notes / Daily Status (Multi-select)</label>
+                <div style="background: #f8fafc; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 10px; max-height: 180px; overflow-y: auto;">
                     <?php foreach ($predefined_notes_options as $idx => $note_text) :
                         $isChecked = in_array($note_text, $saved_selected_notes, true);
                     ?>
@@ -171,7 +170,7 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
             </div>
 
             <div class="sp-form-group">
-                <textarea id="rep_recs" name="recommendations" class="sp-floating-input" style="height: 50px;" oninput="buildWaMessage()"><?php echo esc_textarea($existing_rep ? $existing_rep['recommendations'] : 'Follow up with absent players to check status and encourage session makeup.'); ?></textarea>
+                <textarea id="rep_recs" name="recommendations" class="sp-floating-input" style="height: 50px;" oninput="buildWaMessage()"><?php echo esc_textarea($existing_rep ? $existing_rep['recommendations'] : ''); ?></textarea>
                 <label for="rep_recs" class="sp-floating-label">Additional Custom Notes</label>
             </div>
 
@@ -374,21 +373,36 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
 </div>
 
 <script>
+function updateCapCalc() {
+    var qty = parseInt(jQuery('#rep_caps').val()) || 0;
+    var tot = qty * 25;
+    jQuery('#caps_calc_preview').text('Total: ' + tot.toFixed(0) + ' AED');
+}
+
 function buildWaMessage() {
     var branch   = '<?php echo esc_js($branch_name); ?>';
     var dateParts= '<?php echo esc_js($report_date); ?>'.split('-');
     var formattedDate = dateParts[2] + '/' + dateParts[1] + '/' + dateParts[0];
 
-    var newRegs  = jQuery('#rep_new_regs').val() || '0';
-    var cardPay  = parseFloat(jQuery('#rep_card_pay').val()) || 0;
-    var renewals = jQuery('#rep_renewals').val() || '0';
-    var caps     = jQuery('#rep_caps').val() || '0';
-    var cashPay  = parseFloat(jQuery('#rep_cash_pay').val()) || 0;
-    var capsTot  = parseFloat(jQuery('#rep_caps_total').val()) || 0;
-    var staff    = jQuery('#rep_staff_status').val() || 'All staff and coaches were present today.';
+    var newRegsVal = jQuery('#rep_new_regs').val();
+    var renewalsVal = jQuery('#rep_renewals').val();
+    var cashVal    = jQuery('#rep_cash_pay').val();
+    var cardVal    = jQuery('#rep_card_pay').val();
+    var capsVal    = jQuery('#rep_caps').val();
+    var bballAbsVal= jQuery('#rep_bball_abs').val();
+    var swimAbsVal = jQuery('#rep_swim_abs').val();
 
-    var bballAbs = jQuery('#rep_bball_abs').val() || '0';
-    var swimAbs  = jQuery('#rep_swim_abs').val() || '0';
+    var newRegs  = newRegsVal !== '' && parseInt(newRegsVal) > 0 ? parseInt(newRegsVal) : 0;
+    var renewals = renewalsVal !== '' && parseInt(renewalsVal) > 0 ? parseInt(renewalsVal) : 0;
+
+    var cashPay  = cashVal !== '' && parseFloat(cashVal) > 0 ? parseFloat(cashVal) : 0;
+    var cardPay  = cardVal !== '' && parseFloat(cardVal) > 0 ? parseFloat(cardVal) : 0;
+
+    var capQty   = capsVal !== '' && parseInt(capsVal) > 0 ? parseInt(capsVal) : 0;
+    var capTotal = capQty * 25;
+
+    var bballAbs = bballAbsVal !== '' && parseInt(bballAbsVal) > 0 ? parseInt(bballAbsVal) : 0;
+    var swimAbs  = swimAbsVal !== '' && parseInt(swimAbsVal) > 0 ? parseInt(swimAbsVal) : 0;
 
     var selectedNotes = [];
     jQuery('.wa-note-checkbox:checked').each(function() {
@@ -397,32 +411,78 @@ function buildWaMessage() {
 
     var customNote = jQuery('#rep_recs').val() || '';
 
-    var totalInc = cardPay + cashPay + capsTot;
+    var totalIncome = cashPay + cardPay + capTotal;
 
-    var txt = "📍 *" + branch + " | Sports Academy*\n" +
-              "🗓️ *" + formattedDate + "*\n\n" +
-              "📝 NEW REGISTRATIONS: *" + newRegs + "*\n" +
-              "📝 RENEWALS: *" + renewals + "*\n\n" +
-              "💳 CARD PAYMENT: *" + cardPay.toFixed(0) + " AED*\n" +
-              "💵 CASH PAYMENT: *" + cashPay.toFixed(0) + " AED*\n\n" +
-              "📝 Swimming Cap: *" + caps + "*\n" +
-              "TOTAL CAPS: *" + capsTot.toFixed(0) + " AED*\n\n" +
-              "🏀 *BASKETBALL PLAYER ABSENCES:* *" + bballAbs + "*\n" +
-              "🏊‍♂️ *SWIMMING PLAYER ABSENCES:* *" + swimAbs + "*\n\n" +
-              "👨‍🏫 *STAFF & COACHES STATUS:*\n" + staff + "\n\n";
+    var lines = [];
 
-    if (selectedNotes.length > 0 || customNote.trim() !== '') {
-        txt += "📝 *DAILY NOTES & FOLLOW-UP:*\n";
-        selectedNotes.forEach(function(note) {
-            txt += "• " + note + "\n";
-        });
-        if (customNote.trim() !== '') {
-            txt += "💡 " + customNote.trim() + "\n";
-        }
-        txt += "\n";
+    // Header always appears
+    lines.push("📍 *" + branch + " | Sports Academy*");
+    lines.push("🗓️ *" + formattedDate + "*");
+    lines.push("");
+
+    // Registrations & Renewals
+    var hasReg = false;
+    if (newRegs > 0) {
+        lines.push("📝 NEW REGISTRATIONS: *" + newRegs + "*");
+        hasReg = true;
+    }
+    if (renewals > 0) {
+        lines.push("📝 RENEWALS: *" + renewals + "*");
+        hasReg = true;
+    }
+    if (hasReg) lines.push("");
+
+    // Payments
+    var hasPay = false;
+    if (cashPay > 0) {
+        lines.push("💵 CASH: *" + cashPay.toFixed(0) + " AED*");
+        hasPay = true;
+    }
+    if (cardPay > 0) {
+        lines.push("💳 CARD: *" + cardPay.toFixed(0) + " AED*");
+        hasPay = true;
+    }
+    if (hasPay) lines.push("");
+
+    // Caps
+    if (capQty > 0) {
+        lines.push("📝 SWIMMING CAP: *" + capQty + "* (*" + capTotal.toFixed(0) + " AED*)");
+        lines.push("");
     }
 
-    txt += "💰 *TOTAL INCOME TODAY:* *" + totalInc.toFixed(0) + " AED*";
+    // Absences
+    var hasAbs = false;
+    if (bballAbs > 0) {
+        lines.push("🏀 *BASKETBALL PLAYER ABSENCES:* *" + bballAbs + "*");
+        hasAbs = true;
+    }
+    if (swimAbs > 0) {
+        lines.push("🏊‍♂️ *SWIMMING PLAYER ABSENCES:* *" + swimAbs + "*");
+        hasAbs = true;
+    }
+    if (hasAbs) lines.push("");
+
+    // Professional Notes
+    if (selectedNotes.length > 0 || customNote.trim() !== '') {
+        lines.push("📝 *PROFESSIONAL NOTES / DAILY STATUS:*");
+        selectedNotes.forEach(function(note) {
+            lines.push("• " + note);
+        });
+        if (customNote.trim() !== '') {
+            lines.push("💡 " + customNote.trim());
+        }
+        lines.push("");
+    }
+
+    // Final Total & Separator
+    if (totalIncome > 0 || hasPay || capQty > 0) {
+        lines.push("━━━━━━━━━━━━━━━━━━━━");
+        lines.push("");
+        lines.push("💰 *TOTAL INCOME TODAY:* *" + totalIncome.toFixed(0) + " AED*");
+    }
+
+    // Clean trailing empty lines
+    var txt = lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 
     jQuery('#waPreviewBox').text(txt);
 }
@@ -478,6 +538,7 @@ function deleteEodItem(itemId) {
     }
 }
 
+updateCapCalc();
 buildWaMessage();
 
 jQuery('#spSecRepForm').on('submit', function(e) {
