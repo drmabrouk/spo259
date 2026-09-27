@@ -648,16 +648,13 @@ class Sportedia_Secondary_Manager {
 
         $report_date   = sanitize_text_field($_POST['report_date']);
         $branch        = sanitize_text_field($_POST['branch']);
-        $new_regs      = intval($_POST['new_registrations']);
-        $card_payments = floatval($_POST['card_payments']);
-        $renewals      = intval($_POST['renewals']);
-        $caps_count    = intval($_POST['caps_count']);
-        $cash_payments = floatval($_POST['cash_payments']);
-        $caps_total    = floatval($_POST['total_caps_amount']);
-        $staff_status  = sanitize_text_field($_POST['staff_status']);
-        $absences      = intval($_POST['player_absences_count']);
-        $bball_abs     = isset($_POST['basketball_absences_count']) ? intval($_POST['basketball_absences_count']) : 0;
-        $swim_abs      = isset($_POST['swimming_absences_count']) ? intval($_POST['swimming_absences_count']) : 0;
+        $new_regs      = isset($_POST['new_registrations']) && $_POST['new_registrations'] !== '' ? intval($_POST['new_registrations']) : 0;
+        $renewals      = isset($_POST['renewals']) && $_POST['renewals'] !== '' ? intval($_POST['renewals']) : 0;
+        $cash_payments = isset($_POST['cash_payments']) && $_POST['cash_payments'] !== '' ? floatval($_POST['cash_payments']) : 0;
+        $card_payments = isset($_POST['card_payments']) && $_POST['card_payments'] !== '' ? floatval($_POST['card_payments']) : 0;
+        $caps_count    = isset($_POST['caps_count']) && $_POST['caps_count'] !== '' ? intval($_POST['caps_count']) : 0;
+        $bball_abs     = isset($_POST['basketball_absences_count']) && $_POST['basketball_absences_count'] !== '' ? intval($_POST['basketball_absences_count']) : 0;
+        $swim_abs      = isset($_POST['swimming_absences_count']) && $_POST['swimming_absences_count'] !== '' ? intval($_POST['swimming_absences_count']) : 0;
 
         $sel_notes_raw = isset($_POST['selected_notes']) ? $_POST['selected_notes'] : array();
         if (is_array($sel_notes_raw)) {
@@ -668,7 +665,8 @@ class Sportedia_Secondary_Manager {
 
         $recs          = sanitize_textarea_field($_POST['recommendations']);
 
-        $total_income  = $card_payments + $cash_payments + $caps_total;
+        $total_caps    = $caps_count * 25;
+        $total_income  = $cash_payments + $card_payments + $total_caps;
 
         if (empty($report_date)) {
             wp_send_json_error('Report date is required.');
@@ -684,9 +682,9 @@ class Sportedia_Secondary_Manager {
             'renewals'                  => $renewals,
             'caps_count'                => $caps_count,
             'cash_payments'             => $cash_payments,
-            'total_caps_amount'         => $caps_total,
-            'staff_status'              => !empty($staff_status) ? $staff_status : 'All staff and coaches are present.',
-            'player_absences_count'     => $absences,
+            'total_caps_amount'         => $total_caps,
+            'staff_status'              => 'Logged via Daily Notes',
+            'player_absences_count'     => ($bball_abs + $swim_abs),
             'basketball_absences_count' => $bball_abs,
             'swimming_absences_count'   => $swim_abs,
             'selected_notes'            => $sel_notes,
