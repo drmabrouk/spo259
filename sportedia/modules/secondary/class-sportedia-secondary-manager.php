@@ -626,13 +626,14 @@ class Sportedia_Secondary_Manager {
         ));
     }
 
-    // AJAX Add EOD Excel Record
+    // AJAX Add / Edit EOD Excel Record
     public function ajax_add_eod_item() {
         check_ajax_referer('sportedia_nonce', 'nonce');
 
         global $wpdb;
         $table = $wpdb->prefix . 'sportedia_sec_eod_records';
 
+        $item_id_pk  = isset($_POST['item_id_pk']) ? intval($_POST['item_id_pk']) : 0;
         $report_date = sanitize_text_field($_POST['report_date']);
         $serial_no   = intval($_POST['serial_no']);
         $item_date   = sanitize_text_field($_POST['item_date']);
@@ -650,22 +651,28 @@ class Sportedia_Secondary_Manager {
             wp_send_json_error('ID and Name are required.');
         }
 
-        $wpdb->insert($table, array(
+        $data = array(
             'report_date'         => $report_date,
             'serial_no'           => $serial_no > 0 ? $serial_no : 1,
             'item_date'           => !empty($item_date) ? $item_date : $report_date,
             'item_id'             => $item_id,
             'item_name'           => $item_name,
             'branch'              => !empty($branch) ? $branch : 'Main',
-            'sport'               => !empty($sport) ? $sport : 'Swimming',
-            'program'             => !empty($program) ? $program : 'Academy',
-            'registration_status' => !empty($reg_status) ? $reg_status : 'New Registration',
+            'sport'               => !empty($sport) ? $sport : 'SWIMMING ACADEMY',
+            'program'             => !empty($program) ? $program : 'SWIMMING',
+            'registration_status' => !empty($reg_status) ? $reg_status : 'NEW REGISTRATION',
             'payment_amount'      => $amount,
-            'payment_method'      => !empty($method) ? $method : 'Card',
+            'payment_method'      => !empty($method) ? $method : 'CARD',
             'notes'               => $notes
-        ));
+        );
 
-        wp_send_json_success('Record entry added to daily report.');
+        if ($item_id_pk > 0) {
+            $wpdb->update($table, $data, array('id' => $item_id_pk));
+            wp_send_json_success('Transaction entry updated successfully.');
+        } else {
+            $wpdb->insert($table, $data);
+            wp_send_json_success('Record entry added to daily report.');
+        }
     }
 
     // AJAX Delete EOD Item
@@ -830,43 +837,147 @@ class Sportedia_Secondary_Manager {
         exit;
     }
 
-    // Export EOD Excel/CSV
+    // Export EOD Excel (Professional 11-column A-K uppercase report) or CSV
     public function handle_export_eod() {
         check_ajax_referer('sportedia_nonce', 'nonce');
 
         @set_time_limit(300);
-        $date = isset($_GET['report_date']) ? sanitize_text_field($_GET['report_date']) : date('Y-m-d');
+        $date   = isset($_GET['report_date']) ? sanitize_text_field($_GET['report_date']) : date('Y-m-d');
+        $format = isset($_GET['export_format']) ? sanitize_text_field($_GET['export_format']) : 'xls';
 
         global $wpdb;
         $table = $wpdb->prefix . 'sportedia_sec_eod_records';
-        $records = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE report_date = %s ORDER BY serial_no ASC, id ASC", $date), ARRAY_A);
+        $rep_table = $wpdb->prefix . 'sportedia_sec_daily_reports';
 
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename=Secondary_EOD_Report_' . $date . '.csv');
+        $records   = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE report_date = %s ORDER BY serial_no ASC, id ASC", $date), ARRAY_A);
+        $daily_rep = $wpdb->get_row($wpdb->prepare("SELECT * FROM $rep_table WHERE report_date = %s", $date), ARRAY_A);
 
-        $output = fopen('php://output', 'w');
-        fputs($output, "\xEF\xBB\xBF"); // UTF-8 BOM
+        $branch_name = $daily_rep && !empty($daily_rep['branch']) ? $daily_rep['branch'] : 'ISCS MUW';
 
-        fputcsv($output, array('Serial No.', 'Date', 'ID', 'Name', 'Branch', 'Sport', 'Program', 'Registration Status', 'Payment Amount', 'Payment Method', 'Notes'));
+        if ($format === 'csv') {
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename=Secondary_EOD_Report_' . $date . '.csv');
 
-        $sr = 1;
-        foreach ($records as $r) {
-            fputcsv($output, array(
-                $sr++,
-                $r['item_date'],
-                $r['item_id'],
-                $r['item_name'],
-                $r['branch'],
-                $r['sport'],
-                $r['program'],
-                $r['registration_status'],
-                $r['payment_amount'],
-                $r['payment_method'],
-                $r['notes']
-            ));
+            $output = fopen('php://output', 'w');
+            fputs($output, "\xEF\xBB\xBF"); // UTF-8 BOM
+
+            // 11 Exact Columns A to K Header
+            fputcsv($output, array('SERIAL', 'DATE', 'ID', 'NAME', 'BRANCH', 'ACADEMY', 'PROGRAM', 'REGISTRATION TYPE', 'PAYMENT AMOUNT', 'PAYMENT METHOD', 'NOTES'));
+
+            $sr = 1;
+            foreach ($records as $r) {
+                fputcsv($output, array(
+                    $r['serial_no'] ? $r['serial_no'] : $sr++,
+                    $r['item_date'],
+                    $r['item_id'],
+                    mb_strtoupper($r['item_name'], 'UTF-8'),
+                    mb_strtoupper($r['branch'], 'UTF-8'),
+                    mb_strtoupper($r['sport'], 'UTF-8'),
+                    mb_strtoupper($r['program'], 'UTF-8'),
+                    mb_strtoupper($r['registration_status'], 'UTF-8'),
+                    number_format((float)$r['payment_amount'], 2, '.', ''),
+                    mb_strtoupper($r['payment_method'], 'UTF-8'),
+                    mb_strtoupper($r['notes'], 'UTF-8')
+                ));
+            }
+
+            fclose($output);
+            exit;
         }
 
-        fclose($output);
+        // Default: Professional Printable Excel Workbook (.xls)
+        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+        header('Content-Disposition: attachment; filename=Secondary_EOD_Report_' . $date . '.xls');
+
+        echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+        echo '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">';
+        echo '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>';
+        echo '<x:Name>End of Day Report</x:Name>';
+        echo '<x:WorksheetOptions><x:DisplayGridlines/><x:Print><x:ValidPrinterInfo/><x:PaperSizeIndex>9</x:PaperSizeIndex><x:Scale>100</x:Scale><x:FitWidth>1</x:FitWidth><x:FitHeight>0</x:FitHeight></x:Print><x:Selected/><x:FreezePanes/><x:FrozenNoSplit/><x:SplitHorizontal>4</x:SplitHorizontal><x:TopRowBottomPane>4</x:TopRowBottomPane><x:ActivePane>2</x:ActivePane></x:WorksheetOptions>';
+        echo '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
+        echo '<style>';
+        echo 'body { font-family: "Calibri", "Segoe UI", Arial, sans-serif; font-size: 11pt; }';
+        echo 'table { border-collapse: collapse; width: 100%; table-layout: fixed; }';
+        echo 'th, td { border: 0.5pt solid #CBD5E1; padding: 8px; font-size: 10pt; vertical-align: middle; }';
+        echo '.title-row { background-color: #0F172A; color: #FFFFFF; font-size: 16pt; font-weight: bold; text-align: center; height: 40px; }';
+        echo '.subtitle-row { background-color: #1E293B; color: #F8FAFC; font-size: 11pt; font-weight: bold; text-align: center; height: 28px; }';
+        echo '.header-cell { background-color: #0284C7; color: #FFFFFF; font-weight: bold; text-align: center; height: 32px; font-size: 10pt; }';
+        echo '.text-cell { text-align: left; mso-number-format:"\@"; }';
+        echo '.num-cell { text-align: right; mso-number-format:"\#\,\#\#0\.00"; }';
+        echo '.center-cell { text-align: center; mso-number-format:"\@"; }';
+        echo '.notes-cell { text-align: left; word-wrap: break-word; mso-number-format:"\@"; }';
+        echo '.total-row { font-weight: bold; background-color: #F1F5F9; height: 30px; font-size: 11pt; }';
+        echo '</style></head><body>';
+
+        echo '<table>';
+        // Column Width Specifications for A-K
+        echo '<col style="width: 50px;">';  // A: SERIAL
+        echo '<col style="width: 100px;">'; // B: DATE
+        echo '<col style="width: 90px;">';  // C: ID
+        echo '<col style="width: 180px;">'; // D: NAME
+        echo '<col style="width: 120px;">'; // E: BRANCH
+        echo '<col style="width: 140px;">'; // F: ACADEMY
+        echo '<col style="width: 130px;">'; // G: PROGRAM
+        echo '<col style="width: 150px;">'; // H: REGISTRATION TYPE
+        echo '<col style="width: 120px;">'; // I: PAYMENT AMOUNT
+        echo '<col style="width: 120px;">'; // J: PAYMENT METHOD
+        echo '<col style="width: 200px;">'; // K: NOTES
+
+        // Title Header
+        echo '<tr><td colspan="11" class="title-row">SPORTEDIA ACADEMY — END OF DAY REPORT</td></tr>';
+        echo '<tr><td colspan="11" class="subtitle-row">REPORT DATE: ' . esc_html($date) . ' | BRANCH: ' . esc_html(mb_strtoupper($branch_name, 'UTF-8')) . '</td></tr>';
+        echo '<tr><td colspan="11" style="height: 10px; border: none;"></td></tr>';
+
+        // Table Header Row (A to K)
+        echo '<tr>';
+        echo '<th class="header-cell">S</th>';
+        echo '<th class="header-cell">DATE</th>';
+        echo '<th class="header-cell">ID</th>';
+        echo '<th class="header-cell">NAME</th>';
+        echo '<th class="header-cell">BRANCH</th>';
+        echo '<th class="header-cell">ACADEMY</th>';
+        echo '<th class="header-cell">PROGRAM</th>';
+        echo '<th class="header-cell">REGISTRATION TYPE</th>';
+        echo '<th class="header-cell">PAYMENT AMOUNT</th>';
+        echo '<th class="header-cell">PAYMENT METHOD</th>';
+        echo '<th class="header-cell">NOTES</th>';
+        echo '</tr>';
+
+        $total_amount = 0;
+        $sr = 1;
+
+        if (!empty($records)) {
+            foreach ($records as $r) {
+                $amount = floatval($r['payment_amount']);
+                $total_amount += $amount;
+
+                echo '<tr>';
+                echo '<td class="center-cell">' . esc_html($r['serial_no'] ? $r['serial_no'] : $sr) . '</td>';
+                echo '<td class="center-cell">' . esc_html($r['item_date']) . '</td>';
+                echo '<td class="center-cell">' . esc_html($r['item_id']) . '</td>';
+                echo '<td class="text-cell">' . esc_html(mb_strtoupper($r['item_name'], 'UTF-8')) . '</td>';
+                echo '<td class="text-cell">' . esc_html(mb_strtoupper($r['branch'], 'UTF-8')) . '</td>';
+                echo '<td class="text-cell">' . esc_html(mb_strtoupper($r['sport'], 'UTF-8')) . '</td>';
+                echo '<td class="text-cell">' . esc_html(mb_strtoupper($r['program'], 'UTF-8')) . '</td>';
+                echo '<td class="center-cell">' . esc_html(mb_strtoupper($r['registration_status'], 'UTF-8')) . '</td>';
+                echo '<td class="num-cell">' . number_format($amount, 2, '.', ',') . '</td>';
+                echo '<td class="center-cell">' . esc_html(mb_strtoupper($r['payment_method'], 'UTF-8')) . '</td>';
+                echo '<td class="notes-cell">' . esc_html(mb_strtoupper($r['notes'], 'UTF-8')) . '</td>';
+                echo '</tr>';
+                $sr++;
+            }
+        } else {
+            echo '<tr><td colspan="11" class="center-cell" style="padding: 20px;">NO RECORDED TRANSACTIONS FOR THIS DATE.</td></tr>';
+        }
+
+        // Summary / Total Row
+        echo '<tr class="total-row">';
+        echo '<td colspan="8" style="text-align: right; font-weight: bold; border-top: 1.5pt solid #0F172A;">TOTAL TRANSACTION INCOME (AED):</td>';
+        echo '<td class="num-cell" style="font-weight: bold; color: #0F172A; border-top: 1.5pt solid #0F172A;">' . number_format($total_amount, 2, '.', ',') . '</td>';
+        echo '<td colspan="2" style="border-top: 1.5pt solid #0F172A;"></td>';
+        echo '</tr>';
+
+        echo '</table></body></html>';
         exit;
     }
 

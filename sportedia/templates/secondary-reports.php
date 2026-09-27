@@ -18,41 +18,57 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
 <div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
     <div>
         <h1 class="sp-page-title">End-of-Day Reports — Secondary Dashboard</h1>
-        <p class="sp-page-subtitle">Generate WhatsApp formatted daily statements and professional Excel/CSV exports.</p>
+        <p class="sp-page-subtitle">Two Independent Report Systems: Structured WhatsApp Statement & Printable 11-Column Excel Workbook.</p>
     </div>
     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <a href="<?php echo esc_url(admin_url('admin-ajax.php?action=sportedia_sec_export_eod&report_date=' . $report_date . '&nonce=' . $export_nonce)); ?>" class="sp-btn sp-btn-secondary sp-btn-sm">
+        <a href="<?php echo esc_url(admin_url('admin-ajax.php?action=sportedia_sec_export_eod&report_date=' . $report_date . '&export_format=xls&nonce=' . $export_nonce)); ?>" class="sp-btn sp-btn-primary sp-btn-sm" style="background-color: #0284c7; border-color: #0284c7;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download EOD Excel (11 Cols)
+            Download Excel Report (.XLS A-K)
+        </a>
+        <a href="<?php echo esc_url(admin_url('admin-ajax.php?action=sportedia_sec_export_eod&report_date=' . $report_date . '&export_format=csv&nonce=' . $export_nonce)); ?>" class="sp-btn sp-btn-secondary sp-btn-sm">
+            Download CSV Export
         </a>
         <a href="<?php echo esc_url(admin_url('admin-ajax.php?action=sportedia_sec_export_attendance&attendance_date=' . $report_date . '&nonce=' . $export_nonce)); ?>" class="sp-btn sp-btn-secondary sp-btn-sm">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download Attendance Excel
+            Attendance Export
         </a>
     </div>
 </div>
 
-<!-- Date Selector -->
+<!-- Date & Branch Filter / History Access -->
 <div class="sp-card" style="padding: 16px; margin-bottom: 20px;">
     <form method="get" action="" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
         <input type="hidden" name="sec_module" value="reports">
 
         <div style="width: 200px;">
+            <label style="font-size: 11px; font-weight: 600; color: var(--sp-text-muted); display: block; margin-bottom: 2px;">REPORT DATE</label>
             <input type="date" name="report_date" class="sp-floating-input" value="<?php echo esc_attr($report_date); ?>">
         </div>
 
-        <div style="width: 200px;">
+        <div style="width: 220px;">
+            <label style="font-size: 11px; font-weight: 600; color: var(--sp-text-muted); display: block; margin-bottom: 2px;">BRANCH NAME</label>
             <input type="text" name="branch" class="sp-floating-input" value="<?php echo esc_attr($branch_name); ?>" placeholder="Branch Name">
         </div>
 
-        <button type="submit" class="sp-btn sp-btn-primary">Load Report Date</button>
+        <div style="margin-top: 16px;">
+            <button type="submit" class="sp-btn sp-btn-primary">Load Report Date & History</button>
+        </div>
     </form>
 </div>
 
+<!-- ========================================================================= -->
+<!-- REPORT SYSTEM 1: WHATSAPP DAILY REPORT -->
+<!-- ========================================================================= -->
 <div class="sp-grid-2" style="margin-bottom: 24px;">
     <!-- Form 1: WhatsApp Report Builder -->
     <div class="sp-card" style="margin-bottom:0;">
-        <h3 style="margin-top:0; font-size: 16px; font-weight: 700; margin-bottom: 14px;">WhatsApp Daily Report Generator</h3>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+            <h3 style="margin:0; font-size: 16px; font-weight: 700; color: #16a34a; display: flex; align-items: center; gap: 6px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                1. WhatsApp Daily Report System
+            </h3>
+            <span class="sp-badge" style="background:#dcfce7; color:#15803d;">Saved Record</span>
+        </div>
+
         <form id="spSecRepForm">
             <input type="hidden" name="report_date" value="<?php echo esc_attr($report_date); ?>">
             <input type="hidden" name="branch" value="<?php echo esc_attr($branch_name); ?>">
@@ -109,15 +125,15 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button type="submit" class="sp-btn sp-btn-primary">Save Report Values</button>
+                <button type="submit" class="sp-btn sp-btn-primary">Save Daily WhatsApp Inputs</button>
             </div>
         </form>
     </div>
 
-    <!-- Live Preview & WhatsApp Message Output -->
+    <!-- Live Preview & WhatsApp Output -->
     <div class="sp-card" style="margin-bottom:0; display: flex; flex-direction: column; justify-content: space-between;">
         <div>
-            <h3 style="margin-top:0; font-size: 16px; font-weight: 700; margin-bottom: 12px;">WhatsApp Formatted Message Preview</h3>
+            <h3 style="margin-top:0; font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--sp-text-primary);">WhatsApp Formatted Statement Preview</h3>
             <div id="waPreviewBox" style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #111827; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 12.5px; white-space: pre-wrap; line-height: 1.5; min-height: 280px; font-weight: 500;">
             </div>
         </div>
@@ -130,12 +146,19 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
     </div>
 </div>
 
-<!-- Structured Excel Record Entries (11 Columns) -->
+<!-- ========================================================================= -->
+<!-- REPORT SYSTEM 2: EXCEL ITEMIZED DAILY TRANSACTIONS (11 COLUMNS A TO K) -->
+<!-- ========================================================================= -->
 <div class="sp-card">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
         <div>
-            <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Excel Itemized Daily Transactions (<?php echo esc_html($report_date); ?>)</h3>
-            <p style="color: var(--sp-text-muted); font-size: 12px; margin: 2px 0 0 0;">Items exported match the exact 11-column Excel report format.</p>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0284c7; display: flex; align-items: center; gap: 6px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                2. Excel Professional Report Data (Exact Columns A–K for <?php echo esc_html($report_date); ?>)
+            </h3>
+            <p style="color: var(--sp-text-muted); font-size: 12px; margin: 2px 0 0 0;">
+                All textual data is saved to DB and automatically exported in <strong>UPPERCASE</strong> formatted Excel workbook (.xls) and CSV.
+            </p>
         </div>
         <button type="button" class="sp-btn sp-btn-primary sp-btn-sm" onclick="openEodItemModal()">
             + Add Transaction Row
@@ -146,43 +169,54 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
         <table class="sp-table">
             <thead>
                 <tr>
-                    <th>Sr.</th>
-                    <th>Date</th>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Branch</th>
-                    <th>Sport</th>
-                    <th>Program</th>
-                    <th>Reg. Status</th>
-                    <th>Amount</th>
-                    <th>Payment Method</th>
-                    <th>Notes</th>
+                    <th style="width: 50px;">A: Serial</th>
+                    <th style="width: 100px;">B: Date</th>
+                    <th style="width: 90px;">C: ID</th>
+                    <th>D: Name</th>
+                    <th>E: Branch</th>
+                    <th>F: Academy</th>
+                    <th>G: Program</th>
+                    <th>H: Registration Type</th>
+                    <th style="text-align: right;">I: Payment Amount</th>
+                    <th>J: Payment Method</th>
+                    <th>K: Notes</th>
                     <th style="text-align: right;">Action</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (!empty($eod_items)) : ?>
-                    <?php foreach ($eod_items as $item) : ?>
+                    <?php
+                    $total_eod_amount = 0;
+                    foreach ($eod_items as $item) :
+                        $amt = floatval($item['payment_amount']);
+                        $total_eod_amount += $amt;
+                    ?>
                         <tr>
-                            <td><?php echo esc_html($item['serial_no']); ?></td>
+                            <td><strong><?php echo esc_html($item['serial_no']); ?></strong></td>
                             <td><?php echo esc_html($item['item_date']); ?></td>
                             <td><code><?php echo esc_html($item['item_id']); ?></code></td>
-                            <td><strong><?php echo esc_html($item['item_name']); ?></strong></td>
-                            <td><?php echo esc_html($item['branch']); ?></td>
-                            <td><?php echo esc_html($item['sport']); ?></td>
-                            <td><?php echo esc_html($item['program']); ?></td>
-                            <td><span class="sp-badge"><?php echo esc_html($item['registration_status']); ?></span></td>
-                            <td><strong><?php echo esc_html(Sportedia_Finance::format_price($item['payment_amount'])); ?></strong></td>
-                            <td><?php echo esc_html($item['payment_method']); ?></td>
-                            <td><?php echo esc_html($item['notes']); ?></td>
-                            <td style="text-align: right;">
+                            <td><strong><?php echo esc_html(strtoupper($item['item_name'])); ?></strong></td>
+                            <td><?php echo esc_html(strtoupper($item['branch'])); ?></td>
+                            <td><?php echo esc_html(strtoupper($item['sport'])); ?></td>
+                            <td><?php echo esc_html(strtoupper($item['program'])); ?></td>
+                            <td><span class="sp-badge"><?php echo esc_html(strtoupper($item['registration_status'])); ?></span></td>
+                            <td style="text-align: right;"><strong><?php echo esc_html(Sportedia_Finance::format_price($amt)); ?></strong></td>
+                            <td><span class="sp-badge" style="background:#f1f5f9; color:#334155;"><?php echo esc_html(strtoupper($item['payment_method'])); ?></span></td>
+                            <td><?php echo esc_html(strtoupper($item['notes'])); ?></td>
+                            <td style="text-align: right; white-space: nowrap;">
+                                <button type="button" class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editEodItem(<?php echo json_encode($item); ?>)'>Edit</button>
                                 <button type="button" class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteEodItem(<?php echo $item['id']; ?>)">Delete</button>
                             </td>
                         </tr>
                     <?php endforeach; ?>
+                    <tr style="background-color: var(--sp-bg-subtle); font-weight: bold;">
+                        <td colspan="8" style="text-align: right;">Total Day Transactions Income (AED):</td>
+                        <td style="text-align: right; color: var(--sp-primary-color); font-size: 14px;"><?php echo esc_html(Sportedia_Finance::format_price($total_eod_amount)); ?></td>
+                        <td colspan="3"></td>
+                    </tr>
                 <?php else : ?>
                     <tr>
-                        <td colspan="12" style="text-align: center; color: var(--sp-text-muted); padding: 32px;">No itemized transaction rows recorded for <?php echo esc_html($report_date); ?> yet.</td>
+                        <td colspan="12" style="text-align: center; color: var(--sp-text-muted); padding: 32px;">No itemized transaction rows recorded for <?php echo esc_html($report_date); ?> yet. Click "+ Add Transaction Row" above to enter records.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>
@@ -190,85 +224,93 @@ $export_nonce = wp_create_nonce('sportedia_nonce');
     </div>
 </div>
 
-<!-- Add EOD Item Modal -->
+<!-- Add / Edit EOD Item Modal (11 Columns Input) -->
 <div id="spEodItemModal" class="sp-modal">
-    <div class="sp-modal-content" style="max-width: 520px;">
+    <div class="sp-modal-content" style="max-width: 580px;">
         <div class="sp-modal-header">
-            <h3 class="sp-modal-title">Add Excel Transaction Item</h3>
+            <h3 class="sp-modal-title" id="spEodModalTitle">Add Excel Transaction Item</h3>
             <button type="button" class="sp-modal-close" onclick="spCloseModal('spEodItemModal')">&times;</button>
         </div>
 
         <form id="spEodItemForm">
+            <input type="hidden" name="item_id_pk" id="eod_item_id_pk" value="0">
             <input type="hidden" name="report_date" value="<?php echo esc_attr($report_date); ?>">
 
             <div class="sp-grid-2">
                 <div class="sp-form-group">
-                    <input type="number" name="serial_no" class="sp-floating-input" value="<?php echo count($eod_items) + 1; ?>" required>
-                    <label class="sp-floating-label">Serial No. *</label>
+                    <input type="number" name="serial_no" id="eod_serial_no" class="sp-floating-input" value="<?php echo count($eod_items) + 1; ?>" required>
+                    <label class="sp-floating-label">Column A: Serial No. *</label>
                 </div>
 
                 <div class="sp-form-group">
-                    <input type="date" name="item_date" class="sp-floating-input" value="<?php echo esc_attr($report_date); ?>" required>
-                    <label class="sp-floating-label">Date *</label>
-                </div>
-            </div>
-
-            <div class="sp-grid-2">
-                <div class="sp-form-group">
-                    <input type="text" name="item_id" class="sp-floating-input" placeholder=" " required>
-                    <label class="sp-floating-label">Player ID / Code *</label>
-                </div>
-
-                <div class="sp-form-group">
-                    <input type="text" name="item_name" class="sp-floating-input" placeholder=" " required>
-                    <label class="sp-floating-label">Player Full Name *</label>
+                    <input type="date" name="item_date" id="eod_item_date" class="sp-floating-input" value="<?php echo esc_attr($report_date); ?>" required>
+                    <label class="sp-floating-label">Column B: Date *</label>
                 </div>
             </div>
 
             <div class="sp-grid-2">
                 <div class="sp-form-group">
-                    <input type="text" name="branch" class="sp-floating-input" value="<?php echo esc_attr($branch_name); ?>">
-                    <label class="sp-floating-label">Branch</label>
+                    <input type="text" name="item_id" id="eod_item_id" class="sp-floating-input" placeholder=" " required>
+                    <label class="sp-floating-label">Column C: Player ID / Code *</label>
                 </div>
 
                 <div class="sp-form-group">
-                    <input type="text" name="sport" class="sp-floating-input" value="Swimming">
-                    <label class="sp-floating-label">Sport</label>
+                    <input type="text" name="item_name" id="eod_item_name" class="sp-floating-input" placeholder=" " required>
+                    <label class="sp-floating-label">Column D: Full Name *</label>
                 </div>
             </div>
 
             <div class="sp-grid-2">
                 <div class="sp-form-group">
-                    <select name="registration_status" class="sp-floating-select">
-                        <option value="New Registration">New Registration</option>
-                        <option value="Renewal">Renewal</option>
+                    <input type="text" name="branch" id="eod_branch" class="sp-floating-input" value="<?php echo esc_attr($branch_name); ?>">
+                    <label class="sp-floating-label">Column E: Branch</label>
+                </div>
+
+                <div class="sp-form-group">
+                    <input type="text" name="sport" id="eod_sport" class="sp-floating-input" value="SWIMMING ACADEMY">
+                    <label class="sp-floating-label">Column F: Academy</label>
+                </div>
+            </div>
+
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
+                    <input type="text" name="program" id="eod_program" class="sp-floating-input" value="SWIMMING">
+                    <label class="sp-floating-label">Column G: Program</label>
+                </div>
+
+                <div class="sp-form-group">
+                    <select name="registration_status" id="eod_reg_status" class="sp-floating-select">
+                        <option value="NEW REGISTRATION">NEW REGISTRATION</option>
+                        <option value="RENEWAL">RENEWAL</option>
                     </select>
-                    <label class="sp-floating-label">Registration Status</label>
+                    <label class="sp-floating-label">Column H: Registration Type</label>
+                </div>
+            </div>
+
+            <div class="sp-grid-2">
+                <div class="sp-form-group">
+                    <input type="number" step="0.01" name="payment_amount" id="eod_payment_amount" class="sp-floating-input" value="0.00">
+                    <label class="sp-floating-label">Column I: Payment Amount (AED)</label>
                 </div>
 
                 <div class="sp-form-group">
-                    <select name="payment_method" class="sp-floating-select">
-                        <option value="Card">Card</option>
-                        <option value="Cash">Cash</option>
-                        <option value="Online">Online Transfer</option>
+                    <select name="payment_method" id="eod_payment_method" class="sp-floating-select">
+                        <option value="CARD">CARD</option>
+                        <option value="CASH">CASH</option>
+                        <option value="ONLINE TRANSFER">ONLINE TRANSFER</option>
                     </select>
-                    <label class="sp-floating-label">Payment Method</label>
+                    <label class="sp-floating-label">Column J: Payment Method</label>
                 </div>
             </div>
 
             <div class="sp-form-group">
-                <input type="number" step="0.01" name="payment_amount" class="sp-floating-input" value="0.00">
-                <label class="sp-floating-label">Payment Amount (AED)</label>
-            </div>
-
-            <div class="sp-form-group">
-                <textarea name="notes" class="sp-floating-input" style="height: 50px;" placeholder=" "></textarea>
-                <label class="sp-floating-label">Transaction Notes</label>
+                <textarea name="notes" id="eod_notes" class="sp-floating-input" style="height: 50px;" placeholder=" "></textarea>
+                <label class="sp-floating-label">Column K: Notes</label>
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--sp-border-color); padding-top: 16px;">
                 <button type="button" class="sp-btn sp-btn-secondary" onclick="spCloseModal('spEodItemModal')">Cancel</button>
-                <button type="submit" class="sp-btn sp-btn-primary">Add Item Row</button>
+                <button type="submit" class="sp-btn sp-btn-primary">Save Transaction Row</button>
             </div>
         </form>
     </div>
@@ -316,6 +358,28 @@ function copyWaText() {
 }
 
 function openEodItemModal() {
+    jQuery('#eod_item_id_pk').val(0);
+    jQuery('#spEodModalTitle').text('Add Excel Transaction Item');
+    jQuery('#eod_item_id').val('');
+    jQuery('#eod_item_name').val('');
+    jQuery('#eod_notes').val('');
+    spOpenModal('spEodItemModal');
+}
+
+function editEodItem(item) {
+    jQuery('#eod_item_id_pk').val(item.id);
+    jQuery('#spEodModalTitle').text('Edit Excel Transaction Item');
+    jQuery('#eod_serial_no').val(item.serial_no);
+    jQuery('#eod_item_date').val(item.item_date);
+    jQuery('#eod_item_id').val(item.item_id);
+    jQuery('#eod_item_name').val(item.item_name);
+    jQuery('#eod_branch').val(item.branch);
+    jQuery('#eod_sport').val(item.sport);
+    jQuery('#eod_program').val(item.program);
+    jQuery('#eod_reg_status').val(item.registration_status);
+    jQuery('#eod_payment_amount').val(item.payment_amount);
+    jQuery('#eod_payment_method').val(item.payment_method);
+    jQuery('#eod_notes').val(item.notes);
     spOpenModal('spEodItemModal');
 }
 
