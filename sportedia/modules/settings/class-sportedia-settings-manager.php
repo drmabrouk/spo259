@@ -13,6 +13,26 @@ class Sportedia_Settings_Manager {
 
     public function __construct() {
         add_action('wp_ajax_sportedia_save_settings', array($this, 'ajax_save_settings'));
+        add_action('wp_ajax_sportedia_reset_transactional_data', array($this, 'ajax_reset_transactional_data'));
+    }
+
+    public function ajax_reset_transactional_data() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        if (!current_user_can('manage_options') && !Sportedia_Roles::is_sys_admin()) {
+            wp_send_json_error('Unauthorized.');
+        }
+
+        global $wpdb;
+        $subs_table = $wpdb->prefix . 'sportedia_subscriptions';
+        $att_table  = $wpdb->prefix . 'sportedia_attendance';
+
+        $wpdb->query("TRUNCATE TABLE $subs_table");
+        $wpdb->query("TRUNCATE TABLE $att_table");
+
+        Sportedia_DB::log_activity('reset_transactional_data', 'Administrator performed reset of subscriptions and attendance transactional records.');
+
+        wp_send_json_success('Subscriptions and attendance transactional records reset successfully.');
     }
 
     public static function get_setting($key, $default = '') {

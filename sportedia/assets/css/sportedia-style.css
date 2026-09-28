@@ -541,8 +541,8 @@ textarea.sp-floating-input {
 /* Printable Invoice, Card & Payroll Report CSS Rules */
 @media print {
   @page {
-    size: auto;
-    margin: 0mm;
+    size: A5 portrait;
+    margin: 5mm;
   }
 
   body {

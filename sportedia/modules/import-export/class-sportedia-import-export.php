@@ -14,6 +14,41 @@ class Sportedia_Import_Export {
     public function __construct() {
         add_action('wp_ajax_sportedia_export_csv', array($this, 'handle_export_csv'));
         add_action('wp_ajax_sportedia_import_csv', array($this, 'handle_import_csv'));
+        add_action('wp_ajax_sportedia_export_json_backup', array($this, 'handle_export_json_backup'));
+    }
+
+    public function handle_export_json_backup() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        if (!current_user_can('manage_options') && !Sportedia_Roles::is_sys_admin()) {
+            wp_die('Unauthorized.');
+        }
+
+        @set_time_limit(300);
+
+        global $wpdb;
+
+        $data = array(
+            'export_date'    => date('Y-m-d H:i:s'),
+            'system'         => 'Sportedia Online Management',
+            'users'          => Sportedia_User_Manager::get_users(),
+            'branches'       => Sportedia_Branch_Manager::get_branches(),
+            'programs'       => Sportedia_Program_Manager::get_programs(),
+            'subscriptions'  => Sportedia_Subscription_Manager::get_subscriptions('', 0, ''),
+            'attendance'     => Sportedia_Attendance_Manager::get_attendance('', 0, 0, 0),
+            'sec_players'    => $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sportedia_sec_players", ARRAY_A),
+            'sec_coaches'    => $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sportedia_sec_coaches", ARRAY_A),
+            'sec_branches'   => $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sportedia_sec_branches", ARRAY_A),
+            'sec_attendance' => $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sportedia_sec_attendance", ARRAY_A),
+        );
+
+        Sportedia_DB::log_activity('json_backup_export', 'Exported full JSON system backup.');
+
+        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Disposition: attachment; filename=sportedia_backup_' . date('Y-m-d_H-i') . '.json');
+
+        echo json_encode($data, JSON_PRETTY_PRINT);
+        exit;
     }
 
     public function handle_export_csv() {

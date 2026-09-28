@@ -1,10 +1,37 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+global $wpdb;
+
 $stats = Sportedia_Dashboard::get_stats_for_user();
 $current_user = wp_get_current_user();
-
 $user_id = get_current_user_id();
+
+// Monthly Institutional Income Analytics (Actual Invoice Data)
+$subs_table  = $wpdb->prefix . 'sportedia_subscriptions';
+$curr_month  = date('Y-m');
+$prev_month  = date('Y-m', strtotime('-1 month'));
+
+$curr_revenue = $wpdb->get_var($wpdb->prepare(
+    "SELECT SUM(price) FROM $subs_table WHERE DATE_FORMAT(start_date, '%%Y-%%m') = %s",
+    $curr_month
+));
+$curr_revenue = floatval($curr_revenue);
+
+$prev_revenue = $wpdb->get_var($wpdb->prepare(
+    "SELECT SUM(price) FROM $subs_table WHERE DATE_FORMAT(start_date, '%%Y-%%m') = %s",
+    $prev_month
+));
+$prev_revenue = floatval($prev_revenue);
+
+$revenue_diff = $curr_revenue - $prev_revenue;
+$pct_change   = $prev_revenue > 0 ? round(($revenue_diff / $prev_revenue) * 100, 1) : ($curr_revenue > 0 ? 100.0 : 0.0);
+
+$is_positive = $revenue_diff >= 0;
+$arrow_symbol = $is_positive ? '▲' : '▼';
+$trend_color  = $is_positive ? '#16a34a' : '#dc2626';
+$trend_bg     = $is_positive ? '#dcfce7' : '#fee2e2';
+
 $user_subs = Sportedia_Subscription_Manager::get_subscriptions('', 0, '');
 $has_expired = false;
 $has_active  = false;
@@ -15,6 +42,7 @@ foreach ($user_subs as $ms) {
     }
 }
 
+$app_url = get_permalink(get_option('sportedia_page_id'));
 $kiosk_page_id = get_option('sportedia_kiosk_page_id');
 $kiosk_url = $kiosk_page_id ? get_permalink($kiosk_page_id) : home_url('/sportedia-kiosk/');
 ?>
@@ -22,7 +50,7 @@ $kiosk_url = $kiosk_page_id ? get_permalink($kiosk_page_id) : home_url('/sported
 <?php if ($has_expired && !$has_active) : ?>
     <div class="sp-card" style="background-color: #fef2f2; border-color: #fecaca; padding: 16px 20px; margin-bottom: 24px;">
         <div style="display: flex; align-items: center; gap: 12px; color: #991b1b;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 01-2.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             <div>
                 <strong style="font-size: 16px; display: block;">Subscription Expired</strong>
                 <span style="font-size: 13px;">Your membership subscription has expired. Please contact reception or your facility administrator to renew your membership.</span>
@@ -34,54 +62,74 @@ $kiosk_url = $kiosk_page_id ? get_permalink($kiosk_page_id) : home_url('/sported
 <!-- Dashboard Header -->
 <div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
     <div>
-        <h1 class="sp-page-title">Dashboard Overview</h1>
-        <p class="sp-page-subtitle">Welcome back, <?php echo esc_html($current_user->display_name); ?>. Here is your system performance overview.</p>
+        <h1 class="sp-page-title">Main Dashboard Overview</h1>
+        <p class="sp-page-subtitle">Welcome back, <?php echo esc_html($current_user->display_name); ?>. Here is your institutional performance & financial KPI analytics.</p>
     </div>
-    <a href="<?php echo esc_url($kiosk_url); ?>" target="_blank" class="sp-btn sp-btn-primary">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 12h10"/><path d="M12 7v10"/></svg>
-        Launch Verification System
-    </a>
 </div>
 
-<!-- Key Statistics KPI Cards Grid -->
-<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
-    <?php if (current_user_can('sportedia_manage_branches') || Sportedia_Roles::is_sys_admin()) : ?>
-        <div class="sp-card" style="margin-bottom:0; padding: 18px;">
-            <div style="font-size: 12px; color: var(--sp-text-muted); font-weight: 600; text-transform: uppercase;">ACTIVE BRANCHES</div>
-            <div style="font-size: 30px; font-weight: 700; margin-top: 6px; color: var(--sp-text-main);"><?php echo esc_html($stats['total_branches']); ?></div>
-        </div>
-    <?php endif; ?>
+<!-- THREE PRIMARY QUICK ACCESS BUTTONS -->
+<div class="sp-card" style="padding: 16px 20px; margin-bottom: 24px; background: #ffffff; border: 1px solid var(--sp-border-color);">
+    <div style="font-size: 11px; font-weight: 700; color: var(--sp-text-muted); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">
+        PRIMARY QUICK ACCESS ACTIONS
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+        <!-- ACTION 1: Verification System Kiosk -->
+        <a href="<?php echo esc_url($kiosk_url); ?>" target="_blank" class="sp-btn sp-btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 12h10"/><path d="M12 7v10"/></svg>
+            1. Verification System
+        </a>
 
-    <?php if (current_user_can('sportedia_manage_users') || Sportedia_Roles::is_sys_admin()) : ?>
-        <div class="sp-card" style="margin-bottom:0; padding: 18px;">
-            <div style="font-size: 12px; color: var(--sp-text-muted); font-weight: 600; text-transform: uppercase;">SYSTEM USERS</div>
-            <div style="font-size: 30px; font-weight: 700; margin-top: 6px; color: var(--sp-text-main);"><?php echo esc_html($stats['total_users']); ?></div>
+        <!-- ACTION 2: New Member / New Subscription -->
+        <a href="<?php echo esc_url(add_query_arg('module', 'subscriptions', $app_url)); ?>" class="sp-btn sp-btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; background-color: #0284c7; border-color: #0284c7;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
+            2. New Member / Subscription
+        </a>
+
+        <!-- ACTION 3: Daily Operations & Reports -->
+        <a href="<?php echo esc_url(add_query_arg('module', 'reports', $app_url)); ?>" class="sp-btn sp-btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; background-color: #0f172a; border-color: #0f172a;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            3. Daily Operations & Reports
+        </a>
+    </div>
+</div>
+
+<!-- PROFESSIONAL FINANCIAL & INSTITUTIONAL KPI CARDS GRID -->
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px;">
+    <!-- FINANCIAL KPI CARD: Monthly Institutional Revenue -->
+    <div class="sp-card" style="margin-bottom:0; padding: 20px; border-top: 3px solid #0284c7;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span style="font-size: 11px; color: var(--sp-text-muted); font-weight: 700; text-transform: uppercase;">MONTHLY REVENUE (<?php echo date('M Y'); ?>)</span>
+            <span class="sp-badge" style="background: <?php echo $trend_bg; ?>; color: <?php echo $trend_color; ?>; font-weight: 800;">
+                <?php echo $arrow_symbol . ' ' . abs($pct_change) . '%'; ?>
+            </span>
         </div>
-    <?php endif; ?>
+        <div style="font-size: 28px; font-weight: 800; margin: 10px 0 4px 0; color: #0f172a;">
+            <?php echo esc_html(Sportedia_Finance::format_price($curr_revenue)); ?>
+        </div>
+        <div style="font-size: 12px; color: var(--sp-text-muted);">
+            Previous Month: <strong><?php echo esc_html(Sportedia_Finance::format_price($prev_revenue)); ?></strong>
+        </div>
+    </div>
 
     <?php if (current_user_can('sportedia_manage_subscriptions') || Sportedia_Roles::is_sys_admin()) : ?>
-        <div class="sp-card" style="margin-bottom:0; padding: 18px;">
-            <div style="font-size: 12px; color: var(--sp-text-muted); font-weight: 600; text-transform: uppercase;">ACTIVE SUBSCRIPTIONS</div>
-            <div style="font-size: 30px; font-weight: 700; margin-top: 6px; color: var(--sp-text-main);"><?php echo esc_html($stats['total_subs']); ?></div>
+        <div class="sp-card" style="margin-bottom:0; padding: 20px; border-top: 3px solid #10b981;">
+            <div style="font-size: 11px; color: var(--sp-text-muted); font-weight: 700; text-transform: uppercase;">ACTIVE SUBSCRIPTIONS</div>
+            <div style="font-size: 28px; font-weight: 800; margin: 10px 0 4px 0; color: #0f172a;"><?php echo esc_html($stats['total_subs']); ?></div>
+            <div style="font-size: 12px; color: #166534;">Active Member Accounts</div>
         </div>
 
-        <div class="sp-card" style="margin-bottom:0; padding: 18px;">
-            <div style="font-size: 12px; color: var(--sp-text-muted); font-weight: 600; text-transform: uppercase;">REMAINING SESSIONS</div>
-            <div style="font-size: 30px; font-weight: 700; margin-top: 6px; color: #166534;"><?php echo esc_html($stats['total_sessions_remaining']); ?></div>
-        </div>
-    <?php endif; ?>
-
-    <?php if (current_user_can('sportedia_manage_programs') || current_user_can('sportedia_view_programs') || Sportedia_Roles::is_sys_admin()) : ?>
-        <div class="sp-card" style="margin-bottom:0; padding: 18px;">
-            <div style="font-size: 12px; color: var(--sp-text-muted); font-weight: 600; text-transform: uppercase;">ACTIVE PROGRAMS</div>
-            <div style="font-size: 30px; font-weight: 700; margin-top: 6px; color: var(--sp-text-main);"><?php echo esc_html($stats['total_programs']); ?></div>
+        <div class="sp-card" style="margin-bottom:0; padding: 20px; border-top: 3px solid #f59e0b;">
+            <div style="font-size: 11px; color: var(--sp-text-muted); font-weight: 700; text-transform: uppercase;">REMAINING SESSIONS</div>
+            <div style="font-size: 28px; font-weight: 800; margin: 10px 0 4px 0; color: #166534;"><?php echo esc_html($stats['total_sessions_remaining']); ?></div>
+            <div style="font-size: 12px; color: var(--sp-text-muted);">Total Available Member Sessions</div>
         </div>
     <?php endif; ?>
 
     <?php if (current_user_can('sportedia_manage_attendance') || Sportedia_Roles::is_sys_admin()) : ?>
-        <div class="sp-card" style="margin-bottom:0; padding: 18px;">
-            <div style="font-size: 12px; color: var(--sp-text-muted); font-weight: 600; text-transform: uppercase;">TODAY'S ATTENDANCE</div>
-            <div style="font-size: 30px; font-weight: 700; margin-top: 6px; color: var(--sp-text-main);"><?php echo esc_html($stats['today_att']); ?></div>
+        <div class="sp-card" style="margin-bottom:0; padding: 20px; border-top: 3px solid #6366f1;">
+            <div style="font-size: 11px; color: var(--sp-text-muted); font-weight: 700; text-transform: uppercase;">TODAY'S ATTENDANCE</div>
+            <div style="font-size: 28px; font-weight: 800; margin: 10px 0 4px 0; color: #0f172a;"><?php echo esc_html($stats['today_att']); ?></div>
+            <div style="font-size: 12px; color: var(--sp-text-muted);">Timestamped Check-ins Today</div>
         </div>
     <?php endif; ?>
 </div>
