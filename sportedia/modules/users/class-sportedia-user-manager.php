@@ -11,27 +11,36 @@ class Sportedia_User_Manager {
         return self::$instance;
     }
 
-    public static function get_next_member_id($prefix = 'MEM-') {
+    public static function get_next_member_id($prefix = '') {
         global $wpdb;
+        $current_year = date('Y');
+        $configured_seq = get_option('sportedia_next_member_sequence', 700);
+
         $meta_values = $wpdb->get_col("SELECT meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'sportedia_employee_id'");
 
-        $max_num = 1000;
+        $max_seq = intval($configured_seq) > 0 ? intval($configured_seq) - 1 : 700;
+
         if (!empty($meta_values)) {
             foreach ($meta_values as $val) {
                 preg_match_all('/\d+/', $val, $matches);
                 if (!empty($matches[0])) {
                     foreach ($matches[0] as $num_str) {
                         $num = intval($num_str);
-                        if ($num > $max_num) {
-                            $max_num = $num;
+                        if (strlen($num_str) >= 7 && substr($num_str, 0, 4) === $current_year) {
+                            $seq = intval(substr($num_str, 4));
+                            if ($seq > $max_seq) {
+                                $max_seq = $seq;
+                            }
+                        } else if ($num > $max_seq && $num < 2000000) {
+                            $max_seq = $num;
                         }
                     }
                 }
             }
         }
 
-        $next_num = $max_num + 1;
-        return $prefix . $next_num;
+        $next_seq = $max_seq + 1;
+        return $current_year . $next_seq;
     }
 
     public static function get_nationalities() {

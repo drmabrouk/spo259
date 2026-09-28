@@ -119,7 +119,9 @@ $timezones_list = array(
                 <label for="setting_vat" class="sp-floating-label">Standard VAT Rate (%)</label>
             </div>
 
-        <?php elseif ($active_tab === 'users') : ?>
+        <?php elseif ($active_tab === 'users') :
+            $next_seq_val = get_option('sportedia_next_member_sequence', '700');
+        ?>
             <h3 style="margin-top:0;">Users & Membership Rules</h3>
 
             <div class="sp-form-group">
@@ -133,6 +135,17 @@ $timezones_list = array(
             <div class="sp-form-group">
                 <input type="number" id="setting_grace_days" name="settings[subscription_grace_days]" class="sp-floating-input" value="<?php echo esc_attr($grace_days); ?>">
                 <label for="setting_grace_days" class="sp-floating-label">Expiration Grace Period (Days)</label>
+            </div>
+
+            <!-- MEMBERSHIP SERIAL NUMBER MANAGEMENT -->
+            <div style="background: #f8fafc; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                <h4 style="margin: 0 0 6px 0; font-size: 13px; color: var(--sp-primary-color);">Membership Serial Number Management (Admin Only)</h4>
+                <p style="font-size: 11px; color: var(--sp-text-muted); margin: 0 0 10px 0;">New Member IDs auto-generate as <strong>YEAR + Sequence Number</strong> (e.g., <?php echo date('Y'); ?>701). Set starting sequence base below:</p>
+
+                <div class="sp-form-group" style="margin-bottom:0;">
+                    <input type="number" id="setting_next_seq" name="settings[next_member_sequence]" class="sp-floating-input" value="<?php echo esc_attr($next_seq_val); ?>" required>
+                    <label for="setting_next_seq" class="sp-floating-label">Next Membership Starting Sequence (e.g., 701)</label>
+                </div>
             </div>
 
             <div class="sp-form-group">

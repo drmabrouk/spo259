@@ -40,7 +40,6 @@ $total_count  = 12;
 $used_count   = 0;
 $rem_count    = 12;
 $status_label = 'No Active Plan';
-$level_label  = 'Active Level 1';
 
 if ($member) {
     $m_id = $member->ID;
@@ -105,12 +104,34 @@ if (empty($avatar_url)) {
             padding-bottom: 20px;
             margin-bottom: 20px;
         }
+        .sp-avatar-wrapper {
+            position: relative;
+            cursor: pointer;
+        }
         .sp-portal-avatar {
-            width: 72px;
-            height: 72px;
+            width: 76px;
+            height: 76px;
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid #0284c7;
+            transition: opacity 0.2s ease;
+        }
+        .sp-avatar-wrapper:hover .sp-portal-avatar {
+            opacity: 0.8;
+        }
+        .sp-avatar-upload-badge {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #0284c7;
+            color: #fff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         .sp-portal-name {
             font-size: 20px;
@@ -192,7 +213,14 @@ if (empty($avatar_url)) {
         <!-- Member Profile Header Card -->
         <div class="sp-portal-card">
             <div class="sp-portal-header">
-                <img src="<?php echo esc_url($avatar_url); ?>" alt="<?php echo esc_attr($member->display_name); ?>" class="sp-portal-avatar">
+                <div class="sp-avatar-wrapper" onclick="document.getElementById('member_avatar_file').click();" title="Click to upload profile photo">
+                    <img src="<?php echo esc_url($avatar_url); ?>" id="member_avatar_img" alt="<?php echo esc_attr($member->display_name); ?>" class="sp-portal-avatar">
+                    <div class="sp-avatar-upload-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    </div>
+                </div>
+                <input type="file" id="member_avatar_file" style="display: none;" accept="image/jpeg,image/png,image/webp" onchange="uploadMemberPhoto(<?php echo $member->ID; ?>)">
+
                 <div>
                     <h2 class="sp-portal-name"><?php echo esc_html($member->display_name); ?></h2>
                     <span class="sp-portal-id"><?php echo esc_html(get_user_meta($member->ID, 'sportedia_employee_id', true) ? get_user_meta($member->ID, 'sportedia_employee_id', true) : 'MEM-' . $member->ID); ?></span>
@@ -303,6 +331,39 @@ function showSessionLogModal(num, date, time, program) {
     jQuery('#sess_det_time').text(time);
     jQuery('#sess_det_program').text(program);
     spOpenModal('spSessionDetailModal');
+}
+
+function uploadMemberPhoto(userId) {
+    var fileInput = document.getElementById('member_avatar_file');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) return;
+
+    var file = fileInput.files[0];
+    if (file.size > 2 * 1024 * 1024) {
+        alert('File size exceeds 2 MB limit.');
+        return;
+    }
+
+    var formData = new FormData();
+    formData.append('action', 'sportedia_upload_avatar');
+    formData.append('nonce', sportedia_vars.nonce);
+    formData.append('user_id', userId);
+    formData.append('avatar_file', file);
+
+    jQuery.ajax({
+        url: sportedia_vars.ajax_url,
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function(res) {
+            if (res.success && res.data.avatar_url) {
+                jQuery('#member_avatar_img').attr('src', res.data.avatar_url);
+                alert('Profile photo updated successfully!');
+            } else {
+                alert(res.data || 'Failed to upload photo.');
+            }
+        }
+    });
 }
 </script>
 

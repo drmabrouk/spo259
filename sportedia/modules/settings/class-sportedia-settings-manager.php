@@ -41,6 +41,10 @@ class Sportedia_Settings_Manager {
         if (isset($_POST['settings']) && is_array($_POST['settings'])) {
             foreach ($_POST['settings'] as $key => $val) {
                 self::update_setting($key, $val);
+                if ($key === 'next_member_sequence') {
+                    update_option('sportedia_next_member_sequence', sanitize_text_field($val));
+                    Sportedia_DB::log_activity('reset_member_sequence', 'Administrator updated next member starting sequence to ' . sanitize_text_field($val));
+                }
             }
             wp_send_json_success('System settings saved successfully.');
         }
