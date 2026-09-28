@@ -179,7 +179,10 @@ class Sportedia_Import_Export {
                     wp_update_user(array('ID' => $user_id, 'display_name' => $name));
                     $u = new WP_User($user_id);
                     $u->set_role(!empty($role) ? $role : 'sportedia_customer');
-                    update_user_meta($user_id, 'sportedia_employee_id', !empty($employee_id) ? $employee_id : ('MEM-' . $user_id));
+                    if (empty($employee_id)) {
+                        $employee_id = Sportedia_User_Manager::get_next_member_id('MEM-');
+                    }
+                    update_user_meta($user_id, 'sportedia_employee_id', $employee_id);
                     update_user_meta($user_id, 'sportedia_status', 'active');
                     $imported_count++;
                 } else {

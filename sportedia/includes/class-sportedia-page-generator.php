@@ -89,6 +89,30 @@ class Sportedia_Page_Generator {
             wp_update_post(array('ID' => $sec_page_id, 'post_status' => 'publish'));
         }
 
+        // 4. Member Portal Page ('sportedia-member') -> <!-- sportedia_member -->
+        $mem_page_id = get_option('sportedia_member_page_id');
+        if (!$mem_page_id || !get_post($mem_page_id)) {
+            $mem_by_slug = get_page_by_path('sportedia-member');
+            if ($mem_by_slug) {
+                update_option('sportedia_member_page_id', $mem_by_slug->ID);
+            } else {
+                $mem_data = array(
+                    'post_title'     => 'Member Portal',
+                    'post_name'      => 'sportedia-member',
+                    'post_content'   => '<!-- sportedia_member -->[sportedia_member]',
+                    'post_status'    => 'publish',
+                    'post_type'      => 'page',
+                    'comment_status' => 'closed'
+                );
+                $new_mem_id = wp_insert_post($mem_data);
+                if ($new_mem_id && !is_wp_error($new_mem_id)) {
+                    update_option('sportedia_member_page_id', $new_mem_id);
+                }
+            }
+        } else if (get_post_status($mem_page_id) !== 'publish') {
+            wp_update_post(array('ID' => $mem_page_id, 'post_status' => 'publish'));
+        }
+
         return get_option('sportedia_page_id');
     }
 }

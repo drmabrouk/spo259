@@ -8,6 +8,7 @@ class Sportedia_Template_Loader {
         add_shortcode('sportedia_app', array($this, 'shortcode_app'));
         add_shortcode('sportedia_kiosk', array($this, 'shortcode_kiosk'));
         add_shortcode('sportedia_secondary', array($this, 'shortcode_secondary'));
+        add_shortcode('sportedia_member', array($this, 'shortcode_member'));
     }
 
     public static function is_dashboard_page() {
@@ -50,11 +51,31 @@ class Sportedia_Template_Loader {
         return false;
     }
 
+    public static function is_member_portal_page() {
+        global $post;
+        $mem_id = get_option('sportedia_member_page_id');
+
+        if (isset($_GET['sportedia_member_access'])) {
+            return true;
+        }
+        if (is_page($mem_id) || is_page('sportedia-member')) {
+            return true;
+        }
+        if ($post && (has_shortcode($post->post_content, 'sportedia_member') || strpos($post->post_content, '<!-- sportedia_member -->') !== false)) {
+            return true;
+        }
+        return false;
+    }
+
     public static function is_sportedia_page() {
-        return self::is_dashboard_page() || self::is_kiosk_page() || self::is_secondary_page();
+        return self::is_dashboard_page() || self::is_kiosk_page() || self::is_secondary_page() || self::is_member_portal_page();
     }
 
     public function load_sportedia_template($template) {
+        if (self::is_member_portal_page()) {
+            return SPORTEDIA_PLUGIN_DIR . 'templates/member-portal.php';
+        }
+
         if (self::is_secondary_page()) {
             if (!is_user_logged_in()) {
                 return SPORTEDIA_PLUGIN_DIR . 'templates/login-form.php';
@@ -77,6 +98,12 @@ class Sportedia_Template_Loader {
         }
 
         return $template;
+    }
+
+    public function shortcode_member() {
+        ob_start();
+        include SPORTEDIA_PLUGIN_DIR . 'templates/member-portal.php';
+        return ob_get_clean();
     }
 
     public function shortcode_app() {

@@ -5,6 +5,7 @@ class Sportedia_Auth {
 
     public function __construct() {
         add_action('init', array($this, 'handle_login_submission'));
+        add_action('init', array($this, 'handle_member_access_submission'));
         add_action('wp_logout', array($this, 'handle_logout_redirect'));
         add_filter('authenticate', array($this, 'authenticate_employee_id_or_email'), 20, 3);
     }
@@ -68,6 +69,62 @@ class Sportedia_Auth {
                 wp_safe_redirect(get_permalink($page_id));
                 exit;
             }
+        }
+    }
+
+    public function handle_member_access_submission() {
+        if (isset($_POST['sportedia_member_access_submit'])) {
+            if (!isset($_POST['sportedia_member_nonce']) || !wp_verify_nonce($_POST['sportedia_member_nonce'], 'sportedia_member_action')) {
+                wp_die('Security verification failed.');
+            }
+
+            $member_id_input = sanitize_text_field($_POST['member_id_input']);
+            $member_dob      = isset($_POST['member_dob']) ? sanitize_text_field($_POST['member_dob']) : '';
+
+            $barcode = trim($member_id_input, " *\t\n\r\0\x0B");
+
+            $users = get_users(array(
+                'meta_key'   => 'sportedia_employee_id',
+                'meta_value' => $barcode,
+                'number'     => 1,
+            ));
+
+            if (empty($users)) {
+                $u_obj = get_user_by('login', $barcode);
+                if (!$u_obj) $u_obj = get_user_by('email', $barcode);
+                if (!$u_obj && is_numeric($barcode)) $u_obj = get_user_by('id', intval($barcode));
+                if ($u_obj) $users = array($u_obj);
+            }
+
+            $page_id = get_option('sportedia_page_id');
+
+            if (empty($users)) {
+                $redirect_url = add_query_arg('login_error', urlencode('Member ID or Barcode not recognized.'), get_permalink($page_id));
+                wp_safe_redirect($redirect_url);
+                exit;
+            }
+
+            $member = $users[0];
+            $emp_id = get_user_meta($member->ID, 'sportedia_employee_id', true);
+            if (empty($emp_id)) $emp_id = 'MEM-' . $member->ID;
+
+            // Verify DOB if provided
+            if (!empty($member_dob)) {
+                $saved_dob = get_user_meta($member->ID, 'sportedia_dob', true);
+                if (!empty($saved_dob) && $saved_dob !== $member_dob) {
+                    $redirect_url = add_query_arg('login_error', urlencode('Date of birth does not match member records.'), get_permalink($page_id));
+                    wp_safe_redirect($redirect_url);
+                    exit;
+                }
+            }
+
+            // Redirect directly to Member Portal
+            $portal_page_id = get_option('sportedia_member_page_id');
+            $portal_url = $portal_page_id ? get_permalink($portal_page_id) : home_url('/sportedia-member/');
+            $redirect_url = add_query_arg('sportedia_member_access', urlencode($emp_id), $portal_url);
+
+            wp_safe_redirect($redirect_url);
+            exit;
         }
     }
 

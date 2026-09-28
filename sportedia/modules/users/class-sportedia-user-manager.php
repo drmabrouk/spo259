@@ -11,6 +11,29 @@ class Sportedia_User_Manager {
         return self::$instance;
     }
 
+    public static function get_next_member_id($prefix = 'MEM-') {
+        global $wpdb;
+        $meta_values = $wpdb->get_col("SELECT meta_value FROM {$wpdb->usermeta} WHERE meta_key = 'sportedia_employee_id'");
+
+        $max_num = 1000;
+        if (!empty($meta_values)) {
+            foreach ($meta_values as $val) {
+                preg_match_all('/\d+/', $val, $matches);
+                if (!empty($matches[0])) {
+                    foreach ($matches[0] as $num_str) {
+                        $num = intval($num_str);
+                        if ($num > $max_num) {
+                            $max_num = $num;
+                        }
+                    }
+                }
+            }
+        }
+
+        $next_num = $max_num + 1;
+        return $prefix . $next_num;
+    }
+
     public static function get_nationalities() {
         return array(
             'Emirati', 'Egyptian', 'Saudi', 'Jordanian', 'Lebanese', 'Syrian',
