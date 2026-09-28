@@ -20,6 +20,10 @@ $kiosk_url = $kiosk_page_id ? get_permalink($kiosk_page_id) : home_url('/sported
         <p class="sp-page-subtitle">Track daily check-ins for members, employees, and coaches across branches and programs.</p>
     </div>
     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button type="button" class="sp-btn sp-btn-secondary" onclick="exportAttendanceToExcel()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Export to Excel
+        </button>
         <a href="<?php echo esc_url($kiosk_url); ?>" target="_blank" class="sp-btn sp-btn-secondary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 12h10"/><path d="M12 7v10"/></svg>
             Launch Attendance Kiosk
@@ -250,4 +254,23 @@ jQuery('#spAttForm').on('submit', function(e) {
         }
     });
 });
+
+function exportAttendanceToExcel() {
+    var table = document.querySelector('.sp-table');
+    if (!table) return;
+
+    var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+    html += '<head><meta charset="utf-8"/><style>table{border-collapse:collapse;} th,td{border:1px solid #000;padding:6px;}</style></head><body>';
+    html += '<h2>Sportedia - Attendance Report (' + <?php echo json_encode($att_date); ?> + ')</h2>';
+    html += table.outerHTML;
+    html += '</body></html>';
+
+    var blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'Sportedia_Attendance_' + <?php echo json_encode($att_date); ?> + '.xls';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 </script>

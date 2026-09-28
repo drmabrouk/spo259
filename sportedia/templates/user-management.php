@@ -55,60 +55,38 @@ $nationalitiesList = Sportedia_User_Manager::get_nationalities();
     </form>
 </div>
 
-<!-- Modern Cards Display (Sorted Newest to Oldest) -->
+<!-- Stacked Full-Width User Rows (Sorted Newest Registered First) -->
 <?php if (!empty($usersList)) : ?>
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+    <div style="display: flex; flex-direction: column; gap: 12px;">
         <?php foreach ($usersList as $u) : ?>
-            <div class="sp-card" style="margin-bottom: 0; padding: 18px; border-radius: var(--sp-radius); display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <!-- Header with Avatar -->
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <?php if (!empty($u['avatar_url'])) : ?>
-                                <img src="<?php echo esc_url($u['avatar_url']); ?>" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--sp-border-color);">
-                            <?php else : ?>
-                                <div class="sp-user-avatar" style="width: 40px; height: 40px; font-size: 15px; font-weight: 700;"><?php echo esc_html(strtoupper(substr($u['name'], 0, 1))); ?></div>
-                            <?php endif; ?>
-                            <div>
-                                <strong style="font-size: 15px; color: var(--sp-text-main); display: block;"><?php echo esc_html($u['name']); ?></strong>
-                                <span style="font-size: 11px; color: var(--sp-text-muted); font-family: monospace;">ID: <?php echo esc_html($u['employee_id']); ?></span>
-                            </div>
-                        </div>
-
-                        <span class="sp-badge <?php echo $u['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
-                            <?php echo esc_html(ucfirst($u['status'])); ?>
-                        </span>
-                    </div>
-
-                    <!-- Details Box -->
-                    <div style="background: #f8f9fa; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 12px; font-size: 12px; margin-bottom: 14px;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                            <div>
-                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">ROLE</span>
-                                <strong><?php echo esc_html($u['role']); ?></strong>
-                            </div>
-                            <div>
-                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">NATIONALITY</span>
-                                <span><?php echo esc_html($u['nationality'] ? $u['nationality'] : 'N/A'); ?></span>
-                            </div>
-                        </div>
-
-                        <div style="margin-bottom: 8px;">
-                            <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">EMAIL ADDRESS</span>
-                            <span style="word-break: break-all;"><?php echo esc_html($u['email']); ?></span>
-                        </div>
-
-                        <div style="border-top: 1px dashed var(--sp-border-color); padding-top: 6px; display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 10px; color: var(--sp-text-muted);">HEALTH METRICS</span>
-                            <span style="font-weight: 600; font-size: 11px;">
-                                <?php echo esc_html($u['height'] ? $u['height'] . 'cm' : '-'); ?> / <?php echo esc_html($u['weight'] ? $u['weight'] . 'kg' : '-'); ?>
-                                (<?php echo esc_html($u['health_status'] ? $u['health_status'] : 'Fit'); ?>)
-                            </span>
-                        </div>
+            <div class="sp-card" style="margin-bottom: 0; padding: 16px 20px; border-radius: var(--sp-radius); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                <div style="display: flex; align-items: center; gap: 14px; flex: 2; min-width: 240px;">
+                    <?php if (!empty($u['avatar_url'])) : ?>
+                        <img src="<?php echo esc_url($u['avatar_url']); ?>" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1px solid var(--sp-border-color);">
+                    <?php else : ?>
+                        <div class="sp-user-avatar" style="width: 44px; height: 44px; font-size: 16px; font-weight: 700;"><?php echo esc_html(strtoupper(substr($u['name'], 0, 1))); ?></div>
+                    <?php endif; ?>
+                    <div>
+                        <strong style="font-size: 16px; color: var(--sp-text-main); display: block;"><?php echo esc_html($u['name']); ?></strong>
+                        <span style="font-size: 11px; color: var(--sp-text-muted); font-family: monospace;">ID: <?php echo esc_html($u['employee_id']); ?> | <?php echo esc_html($u['email']); ?></span>
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--sp-border-color); padding-top: 10px; margin-top: auto;">
+                <div style="flex: 1; min-width: 160px; font-size: 12px;">
+                    <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Role</span>
+                    <strong><?php echo esc_html($u['role']); ?></strong>
+                </div>
+
+                <div style="flex: 1; min-width: 140px; font-size: 12px;">
+                    <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Nationality / Phone</span>
+                    <span><?php echo esc_html($u['nationality'] ? $u['nationality'] : 'N/A'); ?> | <?php echo esc_html($u['phone'] ? $u['phone'] : 'N/A'); ?></span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span class="sp-badge <?php echo $u['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                        <?php echo esc_html(ucfirst($u['status'])); ?>
+                    </span>
+
                     <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editUser(<?php echo json_encode($u); ?>)'>Edit Profile</button>
                     <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteUser(<?php echo $u['id']; ?>)">Delete</button>
                 </div>

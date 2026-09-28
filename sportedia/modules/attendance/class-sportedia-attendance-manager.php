@@ -438,12 +438,14 @@ class Sportedia_Attendance_Manager {
             $user_id, $date, $program_id
         ));
 
+        $now_time = date('H:i:s');
         $data = array(
             'branch_id'       => $branch_id,
             'program_id'      => $program_id,
             'user_id'         => $user_id,
             'user_type'       => !empty($user_type) ? $user_type : 'employee',
             'attendance_date' => $date,
+            'check_in_time'   => ($status === 'present' || $status === 'late') ? ($date . ' ' . $now_time) : null,
             'status'          => $status,
             'checked_in_by'   => get_current_user_id()
         );

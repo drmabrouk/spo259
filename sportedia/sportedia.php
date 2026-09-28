@@ -40,7 +40,6 @@ require_once SPORTEDIA_PLUGIN_DIR . 'modules/coaches/class-sportedia-coach-manag
 require_once SPORTEDIA_PLUGIN_DIR . 'modules/reports/class-sportedia-reports-manager.php';
 require_once SPORTEDIA_PLUGIN_DIR . 'modules/settings/class-sportedia-settings-manager.php';
 require_once SPORTEDIA_PLUGIN_DIR . 'modules/import-export/class-sportedia-import-export.php';
-require_once SPORTEDIA_PLUGIN_DIR . 'modules/secondary/class-sportedia-secondary-manager.php';
 
 /**
  * Main Sportedia Class
@@ -85,7 +84,6 @@ final class Sportedia {
         Sportedia_Reports_Manager::instance();
         Sportedia_Settings_Manager::instance();
         Sportedia_Import_Export::instance();
-        Sportedia_Secondary_Manager::instance();
     }
 
     public function init_roles() {

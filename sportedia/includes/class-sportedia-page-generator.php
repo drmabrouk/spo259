@@ -63,33 +63,7 @@ class Sportedia_Page_Generator {
             wp_update_post(array('ID' => $kiosk_page_id, 'post_status' => 'publish'));
         }
 
-        // 3. Secondary Dashboard Page ('sportedia-secondary') -> <!-- sportedia_secondary -->
-        $sec_page_id = get_option('sportedia_secondary_page_id');
-        if (!$sec_page_id || !get_post($sec_page_id)) {
-            $sec_by_slug = get_page_by_path('sportedia-secondary');
-            if ($sec_by_slug) {
-                update_option('sportedia_secondary_page_id', $sec_by_slug->ID);
-                $sec_page_id = $sec_by_slug->ID;
-            } else {
-                $sec_data = array(
-                    'post_title'     => 'Secondary Dashboard',
-                    'post_name'      => 'sportedia-secondary',
-                    'post_content'   => '<!-- sportedia_secondary -->[sportedia_secondary]',
-                    'post_status'    => 'publish',
-                    'post_type'      => 'page',
-                    'comment_status' => 'closed'
-                );
-                $new_sec_id = wp_insert_post($sec_data);
-                if ($new_sec_id && !is_wp_error($new_sec_id)) {
-                    update_option('sportedia_secondary_page_id', $new_sec_id);
-                    $sec_page_id = $new_sec_id;
-                }
-            }
-        } else if (get_post_status($sec_page_id) !== 'publish') {
-            wp_update_post(array('ID' => $sec_page_id, 'post_status' => 'publish'));
-        }
-
-        // 4. Member Portal Page ('sportedia-member') -> <!-- sportedia_member -->
+        // 3. Member Portal Page ('sportedia-member') -> <!-- sportedia_member -->
         $mem_page_id = get_option('sportedia_member_page_id');
         if (!$mem_page_id || !get_post($mem_page_id)) {
             $mem_by_slug = get_page_by_path('sportedia-member');
