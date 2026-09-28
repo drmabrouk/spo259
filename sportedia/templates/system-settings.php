@@ -1,6 +1,8 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
+global $wpdb;
+
 $site_name          = Sportedia_Settings_Manager::get_setting('site_name', 'Sportedia');
 $system_desc        = Sportedia_Settings_Manager::get_setting('system_desc', 'Complete Online Sports Management System');
 $system_logo        = Sportedia_Settings_Manager::get_setting('system_logo', '');
@@ -31,12 +33,16 @@ $active_tab         = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'brandi
 $app_url = get_permalink(get_option('sportedia_page_id'));
 
 $tabs = array(
-    'branding'      => 'Branding & General',
-    'location'      => 'Location & Time',
-    'users'         => 'Users & Memberships',
-    'branches'      => 'Branches & Facilities',
-    'programs'      => 'Programs & Capacity',
-    'attendance'    => 'Attendance Policy'
+    'branding'       => 'General & Branding',
+    'membership_num' => 'Membership Numbering',
+    'invoice_num'    => 'Invoice Numbering',
+    'roles'          => 'Roles & Permissions',
+    'branches'       => 'Branches',
+    'financial'      => 'Financial / VAT',
+    'attendance'     => 'Attendance',
+    'backup'         => 'Backup & Restore',
+    'reset'          => 'Data Reset',
+    'activity_log'   => 'Activity Log'
 );
 
 $timezones_list = array(
@@ -49,8 +55,8 @@ $timezones_list = array(
 ?>
 
 <div class="sp-page-header" style="margin-bottom: 20px;">
-    <h1 class="sp-page-title">System Settings</h1>
-    <p class="sp-page-subtitle">Configure system options, branding, timezone defaults, user settings, and application parameters.</p>
+    <h1 class="sp-page-title">Centralized System Settings</h1>
+    <p class="sp-page-subtitle">Centralized system administration, membership numbering, roles, backup, data reset, and audit trail.</p>
 </div>
 
 <!-- Streamlined Settings Navigation Tabs -->
@@ -63,7 +69,7 @@ $timezones_list = array(
     <?php endforeach; ?>
 </div>
 
-<div class="sp-card" style="max-width: 640px;">
+<div class="sp-card" style="max-width: 780px;">
     <form id="spSettingsForm">
         <?php if ($active_tab === 'branding') : ?>
             <h3 style="margin-top:0;">System Branding & General Info</h3>
@@ -79,146 +85,129 @@ $timezones_list = array(
             </div>
 
             <div class="sp-form-group">
-                <input type="text" id="setting_system_logo" name="settings[system_logo]" class="sp-floating-input" value="<?php echo esc_attr($system_logo); ?>" placeholder="https://...">
-                <label for="setting_system_logo" class="sp-floating-label">System Logo URL</label>
-            </div>
-
-            <div class="sp-form-group">
-                <input type="text" id="setting_system_icon" name="settings[system_icon]" class="sp-floating-input" value="<?php echo esc_attr($system_icon); ?>" placeholder="https://...">
-                <label for="setting_system_icon" class="sp-floating-label">System Icon URL</label>
-            </div>
-
-            <div class="sp-form-group">
                 <input type="email" id="setting_support_email" name="settings[support_email]" class="sp-floating-input" value="<?php echo esc_attr($support_email); ?>" required>
                 <label for="setting_support_email" class="sp-floating-label">Support Email Address *</label>
             </div>
 
-        <?php elseif ($active_tab === 'location') : ?>
-            <h3 style="margin-top:0;">Location, Timezone & Currency</h3>
-
-            <div class="sp-form-group">
-                <select id="setting_timezone" name="settings[timezone]" class="sp-floating-select">
-                    <?php foreach ($timezones_list as $tz_key => $tz_label) : ?>
-                        <option value="<?php echo esc_attr($tz_key); ?>" <?php selected($timezone, $tz_key); ?>><?php echo esc_html($tz_label); ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <label for="setting_timezone" class="sp-floating-label">System Default Timezone</label>
-            </div>
-
-            <div class="sp-form-group">
-                <select id="setting_currency" name="settings[currency]" class="sp-floating-select">
-                    <option value="AED" <?php selected($currency, 'AED'); ?>>AED (United Arab Emirates Dirham)</option>
-                    <option value="USD" <?php selected($currency, 'USD'); ?>>USD ($)</option>
-                    <option value="EUR" <?php selected($currency, 'EUR'); ?>>EUR (€)</option>
-                </select>
-                <label for="setting_currency" class="sp-floating-label">System Default Currency</label>
-            </div>
-
-            <div class="sp-form-group">
-                <input type="number" id="setting_vat" name="settings[default_vat_rate]" class="sp-floating-input" value="<?php echo esc_attr($default_vat); ?>">
-                <label for="setting_vat" class="sp-floating-label">Standard VAT Rate (%)</label>
-            </div>
-
-        <?php elseif ($active_tab === 'users') :
-            $next_seq_val = get_option('sportedia_next_member_sequence', '700');
+        <?php elseif ($active_tab === 'membership_num') :
+            $next_seq_val = get_option('sportedia_next_member_sequence', '701');
         ?>
-            <h3 style="margin-top:0;">Users & Membership Rules</h3>
+            <h3 style="margin-top:0;">Membership Numbering & Serial Allocation</h3>
+            <p style="font-size: 12px; color: var(--sp-text-muted); margin-bottom: 16px;">New Member IDs auto-generate as <strong>YEAR + Sequence Number</strong> (e.g., <?php echo date('Y'); ?>701). Sequence numbers never restart upon deletion.</p>
+
+            <div class="sp-form-group">
+                <input type="number" id="setting_next_seq" name="settings[next_member_sequence]" class="sp-floating-input" value="<?php echo esc_attr($next_seq_val); ?>" required>
+                <label for="setting_next_seq" class="sp-floating-label">Next Membership Starting Sequence (e.g., 701)</label>
+            </div>
+
+        <?php elseif ($active_tab === 'invoice_num') :
+            $next_inv_val = get_option('sportedia_next_invoice_sequence', '1001');
+        ?>
+            <h3 style="margin-top:0;">Invoice Numbering Sequence</h3>
+
+            <div class="sp-form-group">
+                <input type="number" id="setting_next_inv" name="settings[next_invoice_sequence]" class="sp-floating-input" value="<?php echo esc_attr($next_inv_val); ?>" required>
+                <label for="setting_next_inv" class="sp-floating-label">Next Invoice Starting Number (e.g., 1001)</label>
+            </div>
+
+        <?php elseif ($active_tab === 'roles') : ?>
+            <h3 style="margin-top:0;">Roles & Permissions Overview</h3>
+            <p style="font-size: 12px; color: var(--sp-text-muted); margin-bottom: 16px;">Sportedia 10-Role Hierarchy: System Administrator, General Manager, Administrative Manager, Sports Facility Manager, Sports Supervisor, Registration Officer, Coach, HR Officer, Accounts & Finance, Member.</p>
 
             <div class="sp-form-group">
                 <select id="setting_default_role" name="settings[default_user_role]" class="sp-floating-select">
-                    <option value="sportedia_customer" <?php selected($default_user_role, 'sportedia_customer'); ?>>Customer / Member</option>
-                    <option value="sportedia_coach" <?php selected($default_user_role, 'sportedia_coach'); ?>>Coach / Trainer</option>
+                    <option value="sportedia_customer" <?php selected($default_user_role, 'sportedia_customer'); ?>>Member</option>
+                    <option value="sportedia_coach" <?php selected($default_user_role, 'sportedia_coach'); ?>>Coach</option>
                 </select>
                 <label for="setting_default_role" class="sp-floating-label">Default New Account Role</label>
             </div>
 
+        <?php elseif ($active_tab === 'financial') : ?>
+            <h3 style="margin-top:0;">Financial & UAE VAT Defaults</h3>
+
             <div class="sp-form-group">
-                <input type="number" id="setting_grace_days" name="settings[subscription_grace_days]" class="sp-floating-input" value="<?php echo esc_attr($grace_days); ?>">
-                <label for="setting_grace_days" class="sp-floating-label">Expiration Grace Period (Days)</label>
+                <select id="setting_currency" name="settings[currency]" class="sp-floating-select">
+                    <option value="AED" <?php selected($currency, 'AED'); ?>>AED (United Arab Emirates Dirham)</option>
+                </select>
+                <label for="setting_currency" class="sp-floating-label">Currency</label>
             </div>
 
-            <!-- MEMBERSHIP SERIAL NUMBER MANAGEMENT -->
-            <div style="background: #f8fafc; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
-                <h4 style="margin: 0 0 6px 0; font-size: 13px; color: var(--sp-primary-color);">Membership Serial Number Management (Admin Only)</h4>
-                <p style="font-size: 11px; color: var(--sp-text-muted); margin: 0 0 10px 0;">New Member IDs auto-generate as <strong>YEAR + Sequence Number</strong> (e.g., <?php echo date('Y'); ?>701). Set starting sequence base below:</p>
+            <div class="sp-form-group">
+                <input type="number" id="setting_vat" name="settings[default_vat_rate]" class="sp-floating-input" value="<?php echo esc_attr($default_vat); ?>">
+                <label for="setting_vat" class="sp-floating-label">Standard UAE VAT Rate (%)</label>
+            </div>
 
-                <div class="sp-form-group" style="margin-bottom:0;">
-                    <input type="number" id="setting_next_seq" name="settings[next_member_sequence]" class="sp-floating-input" value="<?php echo esc_attr($next_seq_val); ?>" required>
-                    <label for="setting_next_seq" class="sp-floating-label">Next Membership Starting Sequence (e.g., 701)</label>
+        <?php elseif ($active_tab === 'backup') : ?>
+            <h3 style="margin-top:0;">Backup & Restore System</h3>
+            <p style="font-size: 12px; color: var(--sp-text-muted); margin-bottom: 16px;">Export full JSON system backup containing members, subscriptions, attendance, invoices, and settings.</p>
+
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <button type="button" class="sp-btn sp-btn-primary" onclick="exportFullSystemBackup()">
+                    Download Full JSON System Backup
+                </button>
+            </div>
+
+        <?php elseif ($active_tab === 'reset') : ?>
+            <h3 style="margin-top:0; color: #dc2626;">Controlled System Reset & Data Management</h3>
+            <p style="font-size: 12px; color: var(--sp-text-muted); margin-bottom: 16px;">Perform controlled reset operations independently. Every reset requires explicit confirmation and is recorded in the activity log.</p>
+
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+                <div style="background: #fff; border: 1px solid var(--sp-border-color); padding: 14px; border-radius: 8px;">
+                    <strong>Reset Membership Numbering Sequence</strong>
+                    <p style="font-size: 11px; color: var(--sp-text-muted); margin: 2px 0 8px 0;">Resets the next new membership sequence counter back to 701 without deleting members.</p>
+                    <button type="button" class="sp-btn sp-btn-secondary sp-btn-sm" style="color: #dc2626;" onclick="resetMemberSequenceAdmin()">Reset Membership Sequence Only</button>
+                </div>
+
+                <div style="background: #fff; border: 1px solid var(--sp-border-color); padding: 14px; border-radius: 8px;">
+                    <strong>Reset Transactional Data (Subscriptions & Attendance)</strong>
+                    <p style="font-size: 11px; color: var(--sp-text-muted); margin: 2px 0 8px 0;">Deletes subscription records and attendance logs while preserving user accounts and branches.</p>
+                    <button type="button" class="sp-btn sp-btn-secondary sp-btn-sm" style="color: #dc2626;" onclick="resetTransactionalDataAdmin()">Reset Subscriptions & Attendance Only</button>
                 </div>
             </div>
 
-            <div class="sp-form-group">
-                <select id="setting_enable_renewal" name="settings[enable_renewal_reminders]" class="sp-floating-select">
-                    <option value="yes" <?php selected($enable_renewal, 'yes'); ?>>Enabled</option>
-                    <option value="no" <?php selected($enable_renewal, 'no'); ?>>Disabled</option>
-                </select>
-                <label for="setting_enable_renewal" class="sp-floating-label">Renewal Notifications</label>
+        <?php elseif ($active_tab === 'activity_log') :
+            $log_table = $wpdb->prefix . 'sportedia_activity_log';
+            $logs = $wpdb->get_results("SELECT * FROM $log_table ORDER BY id DESC LIMIT 50", ARRAY_A);
+        ?>
+            <h3 style="margin-top:0;">Searchable Activity & Audit Log</h3>
+
+            <div class="sp-table-wrapper" style="max-height: 360px; overflow-y: auto;">
+                <table class="sp-table">
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>User ID</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (!empty($logs)) : ?>
+                            <?php foreach ($logs as $l) : ?>
+                                <tr>
+                                    <td style="font-family: monospace; font-size: 11px;"><?php echo esc_html($l['created_at']); ?></td>
+                                    <td><?php echo esc_html($l['user_id']); ?></td>
+                                    <td><code><?php echo esc_html($l['action']); ?></code></td>
+                                    <td><?php echo esc_html($l['details']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else : ?>
+                            <tr><td colspan="4" style="text-align:center; padding: 20px; color: var(--sp-text-muted);">No activity records found.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
 
-        <?php elseif ($active_tab === 'branches') : ?>
-            <h3 style="margin-top:0;">Branch & Facility Settings</h3>
-
-            <div class="sp-form-group">
-                <input type="text" id="setting_branch_hours" name="settings[branch_operating_hours]" class="sp-floating-input" value="<?php echo esc_attr($branch_hours); ?>">
-                <label for="setting_branch_hours" class="sp-floating-label">Standard Operating Hours</label>
-            </div>
-
-            <div class="sp-form-group">
-                <input type="number" id="setting_max_branches" name="settings[max_branches_per_mgr]" class="sp-floating-input" value="<?php echo esc_attr($max_branches); ?>">
-                <label for="setting_max_branches" class="sp-floating-label">Max Branches per Facility Manager</label>
-            </div>
-
-        <?php elseif ($active_tab === 'programs') : ?>
-            <h3 style="margin-top:0;">Program & Capacity Settings</h3>
-
-            <div class="sp-form-group">
-                <input type="number" id="setting_default_capacity" name="settings[default_program_capacity]" class="sp-floating-input" value="<?php echo esc_attr($default_capacity); ?>">
-                <label for="setting_default_capacity" class="sp-floating-label">Default Program Capacity Limit</label>
-            </div>
-
-            <div class="sp-form-group">
-                <select id="setting_allow_overbooking" name="settings[allow_overbooking]" class="sp-floating-select">
-                    <option value="no" <?php selected($allow_overbook, 'no'); ?>>No (Strict Capacity Limit)</option>
-                    <option value="yes" <?php selected($allow_overbook, 'yes'); ?>>Yes (Allow Overbooking)</option>
-                </select>
-                <label for="setting_allow_overbooking" class="sp-floating-label">Allow Overbooking</label>
-            </div>
-
-        <?php elseif ($active_tab === 'attendance') : ?>
-            <h3 style="margin-top:0;">Attendance Tracking Policy</h3>
-
-            <div class="sp-form-group">
-                <input type="number" id="setting_lateness_allowance" name="settings[monthly_lateness_allowance]" class="sp-floating-input" value="<?php echo esc_attr($lateness_allowance); ?>">
-                <label for="setting_lateness_allowance" class="sp-floating-label">Monthly Allowed Lateness (Minutes)</label>
-            </div>
-
-            <div class="sp-form-group">
-                <input type="number" id="setting_checkout_threshold" name="settings[checkout_threshold_minutes]" class="sp-floating-input" value="<?php echo esc_attr($checkout_threshold); ?>">
-                <label for="setting_checkout_threshold" class="sp-floating-label">Check-out Re-scan Threshold (Minutes)</label>
-            </div>
-
-            <div class="sp-form-group">
-                <select id="setting_default_att_status" name="settings[default_attendance_status]" class="sp-floating-select">
-                    <option value="present" <?php selected($default_att_status, 'present'); ?>>Present</option>
-                    <option value="late" <?php selected($default_att_status, 'late'); ?>>Late</option>
-                    <option value="absent" <?php selected($default_att_status, 'absent'); ?>>Absent</option>
-                </select>
-                <label for="setting_default_att_status" class="sp-floating-label">Default Check-in Status</label>
-            </div>
-
-            <div class="sp-form-group">
-                <select id="setting_allow_past_att" name="settings[allow_past_attendance]" class="sp-floating-select">
-                    <option value="yes" <?php selected($allow_past_att, 'yes'); ?>>Allowed</option>
-                    <option value="no" <?php selected($allow_past_att, 'no'); ?>>Current Day Only</option>
-                </select>
-                <label for="setting_allow_past_att" class="sp-floating-label">Retroactive Attendance Modification</label>
-            </div>
+        <?php else : ?>
+            <h3 style="margin-top:0;">System Settings</h3>
+            <p style="font-size: 13px; color: var(--sp-text-muted);">Select a settings tab above to manage system configuration options.</p>
         <?php endif; ?>
 
-        <div style="border-top: 1px solid var(--sp-border-color); padding-top: 16px; margin-top: 16px;">
-            <button type="submit" class="sp-btn sp-btn-primary">Save Settings</button>
-        </div>
+        <?php if (in_array($active_tab, array('branding', 'membership_num', 'invoice_num', 'roles', 'financial', 'branches', 'attendance'), true)) : ?>
+            <div style="border-top: 1px solid var(--sp-border-color); padding-top: 16px; margin-top: 16px;">
+                <button type="submit" class="sp-btn sp-btn-primary">Save Settings</button>
+            </div>
+        <?php endif; ?>
     </form>
 </div>
 
@@ -235,4 +224,39 @@ jQuery('#spSettingsForm').on('submit', function(e) {
         }
     });
 });
+
+function resetMemberSequenceAdmin() {
+    if (confirm('RESET MEMBERSHIP SEQUENCE: Set next Member ID sequence to 701? (Existing members will remain unchanged).')) {
+        jQuery.post(sportedia_vars.ajax_url, {
+            action: 'sportedia_save_settings',
+            nonce: sportedia_vars.nonce,
+            settings: { next_member_sequence: '701' }
+        }, function(res) {
+            if (res.success) {
+                alert('Membership sequence reset to 701.');
+                location.reload();
+            }
+        });
+    }
+}
+
+function resetTransactionalDataAdmin() {
+    if (confirm('WARNING: Are you sure you want to reset subscriptions and attendance transactional records? This cannot be undone.')) {
+        jQuery.post(sportedia_vars.ajax_url, {
+            action: 'sportedia_reset_transactional_data',
+            nonce: sportedia_vars.nonce
+        }, function(res) {
+            if (res.success) {
+                alert(res.data || 'Transactional data reset completed.');
+                location.reload();
+            } else {
+                alert(res.data || 'Failed to reset data.');
+            }
+        });
+    }
+}
+
+function exportFullSystemBackup() {
+    window.location.href = sportedia_vars.ajax_url + '?action=sportedia_export_json_backup&nonce=' + sportedia_vars.nonce;
+}
 </script>
