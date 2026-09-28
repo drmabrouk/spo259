@@ -28,7 +28,7 @@ foreach ((array)$curr_u->roles as $r) {
     </div>
     <button class="sp-btn sp-btn-primary" onclick="openSubModal()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add Subscription
+        New Subscription / Registration
     </button>
 </div>
 
@@ -42,7 +42,7 @@ foreach ((array)$curr_u->roles as $r) {
         </div>
 
         <div style="flex: 1; min-width: 160px;">
-            <select name="branch_filter" id="sp_filter_branch" class="sp-floating-select">
+            <select name="branch_filter" id="sp_filter_branch" class="sp-floating-select" style="min-width: 180px;">
                 <option value="0">All Branches</option>
                 <?php foreach ($branchesList as $b) : ?>
                     <option value="<?php echo esc_attr($b['id']); ?>" <?php selected($branch_filter, $b['id']); ?>><?php echo esc_html($b['branch_name']); ?></option>
@@ -51,7 +51,7 @@ foreach ((array)$curr_u->roles as $r) {
         </div>
 
         <div style="flex: 1; min-width: 160px;">
-            <select name="status_filter" id="sp_filter_status" class="sp-floating-select">
+            <select name="status_filter" id="sp_filter_status" class="sp-floating-select" style="min-width: 160px;">
                 <option value="">All Statuses</option>
                 <option value="active" <?php selected($status_filter, 'active'); ?>>Active</option>
                 <option value="expired" <?php selected($status_filter, 'expired'); ?>>Expired</option>
@@ -70,7 +70,7 @@ foreach ((array)$curr_u->roles as $r) {
 <?php if (!empty($subscriptions)) : ?>
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px;">
         <?php foreach ($subscriptions as $s) : ?>
-            <div class="sp-card" style="margin-bottom: 0; padding: 18px; border-radius: var(--sp-radius); display: flex; flex-direction: column; justify-space-between; position: relative;">
+            <div class="sp-card" style="margin-bottom: 0; padding: 18px; border-radius: var(--sp-radius); display: flex; flex-direction: column; justify-content: space-between; position: relative;">
                 <div>
                     <!-- Header Badges -->
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
@@ -143,111 +143,119 @@ foreach ((array)$curr_u->roles as $r) {
     </div>
 <?php endif; ?>
 
-<!-- Enhanced Subscription Modal (Width: 768px, Grid Layout) -->
+<!-- Multi-Step Subscription Registration Modal (Width: 768px) -->
 <div id="spSubModal" class="sp-modal">
     <div class="sp-modal-content" style="max-width: 768px;">
         <div class="sp-modal-header">
-            <h3 id="spSubModalTitle" class="sp-modal-title">Add Subscription</h3>
+            <h3 id="spSubModalTitle" class="sp-modal-title">New Member Registration & Subscription</h3>
             <button type="button" class="sp-modal-close" onclick="spCloseModal('spSubModal')">&times;</button>
         </div>
 
-        <form id="spSubForm">
+        <!-- VISIBLE MULTI-STEP PROGRESS INDICATOR -->
+        <div style="display: flex; background: #f8fafc; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 6px; margin-bottom: 20px;" id="sub_step_progress_bar">
+            <div class="sp-step-tab active" id="step_tab_1" onclick="goToSubStep(1)" style="flex:1; text-align:center; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer; color: #0284c7; background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                1. Member Information
+            </div>
+            <div class="sp-step-tab" id="step_tab_2" onclick="goToSubStep(2)" style="flex:1; text-align:center; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer; color: var(--sp-text-muted);">
+                2. Program & Dates
+            </div>
+            <div class="sp-step-tab" id="step_tab_3" onclick="goToSubStep(3)" style="flex:1; text-align:center; padding: 8px; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer; color: var(--sp-text-muted);">
+                3. Payment & Invoice
+            </div>
+        </div>
+
+        <form id="spSubForm" oninput="saveSubDraft()">
             <input type="hidden" id="sp_sub_id" name="sub_id" value="0">
             <input type="hidden" id="sp_is_renewal" name="is_renewal" value="0">
 
-            <!-- Toggle Mode: New Member vs Renewal -->
-            <div id="spSubModeContainer" style="display: flex; gap: 8px; margin-bottom: 20px; background: var(--sp-bg-main); padding: 4px; border-radius: var(--sp-radius);">
-                <button type="button" id="spModeNewBtn" class="sp-btn sp-btn-primary sp-btn-sm" style="flex: 1;" onclick="setSubMode('new')">New Member Registration</button>
-                <button type="button" id="spModeRenewalBtn" class="sp-btn sp-btn-secondary sp-btn-sm" style="flex: 1;" onclick="setSubMode('renewal')">Member Subscription Renewal</button>
-            </div>
-
-            <!-- Existing Member Selection & Details Card (Renewal Mode Only) -->
-            <div id="spRenewalMemberBox" style="display: none; margin-bottom: 20px;">
-                <div class="sp-form-group">
-                    <select id="sp_sub_user_id" name="user_id" class="sp-floating-select" onchange="onRenewalMemberSelect()">
-                        <option value="">Search Existing Member (by Member ID, Full Name, Mobile...)</option>
-                        <?php foreach ($usersList as $u) : ?>
-                            <option value="<?php echo esc_attr($u['id']); ?>"
-                                    data-name="<?php echo esc_attr($u['name']); ?>"
-                                    data-empid="<?php echo esc_attr($u['employee_id']); ?>"
-                                    data-phone="<?php echo esc_attr($u['phone']); ?>"
-                                    data-email="<?php echo esc_attr($u['email']); ?>"
-                                    data-health="<?php echo esc_attr($u['health_status']); ?>">
-                                <?php echo esc_html($u['name'] . ' (ID: ' . $u['employee_id'] . ' | Mobile: ' . ($u['phone'] ? $u['phone'] : 'N/A') . ')'); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <label for="sp_sub_user_id" class="sp-floating-label">Select Member *</label>
+            <!-- STEP 1: MEMBER INFORMATION -->
+            <div id="sub_step_1">
+                <!-- Toggle Mode: New Member vs Renewal -->
+                <div id="spSubModeContainer" style="display: flex; gap: 8px; margin-bottom: 20px; background: var(--sp-bg-main); padding: 4px; border-radius: var(--sp-radius);">
+                    <button type="button" id="spModeNewBtn" class="sp-btn sp-btn-primary sp-btn-sm" style="flex: 1;" onclick="setSubMode('new')">New Member Registration</button>
+                    <button type="button" id="spModeRenewalBtn" class="sp-btn sp-btn-secondary sp-btn-sm" style="flex: 1;" onclick="setSubMode('renewal')">Member Subscription Renewal</button>
                 </div>
 
-                <!-- Instant Member Info Card -->
-                <div id="spRenewalInfoCard" style="display: none; background: #f8f9fa; border: 1px solid var(--sp-border-color); border-radius: var(--sp-radius); padding: 14px; margin-top: -8px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--sp-border-color); padding-bottom: 8px; margin-bottom: 8px;">
-                        <div>
-                            <strong id="ren_card_name" style="font-size: 14px;">Member Name</strong>
-                            <span id="ren_card_empid" style="font-size: 11px; color: var(--sp-text-muted); font-family: monospace; display: block;">MEM-0000</span>
+                <!-- Existing Member Selection (Renewal Mode Only) -->
+                <div id="spRenewalMemberBox" style="display: none; margin-bottom: 20px;">
+                    <div class="sp-form-group">
+                        <select id="sp_sub_user_id" name="user_id" class="sp-floating-select" style="min-width: 100%;" onchange="onRenewalMemberSelect()">
+                            <option value="">Search Existing Member (by Member ID, Full Name, Mobile...)</option>
+                            <?php foreach ($usersList as $u) : ?>
+                                <option value="<?php echo esc_attr($u['id']); ?>"
+                                        data-name="<?php echo esc_attr($u['name']); ?>"
+                                        data-empid="<?php echo esc_attr($u['employee_id']); ?>"
+                                        data-phone="<?php echo esc_attr($u['phone']); ?>"
+                                        data-email="<?php echo esc_attr($u['email']); ?>">
+                                    <?php echo esc_html($u['name'] . ' (ID: ' . $u['employee_id'] . ' | Mobile: ' . ($u['phone'] ? $u['phone'] : 'N/A') . ')'); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <label for="sp_sub_user_id" class="sp-floating-label">Select Member *</label>
+                    </div>
+
+                    <div id="spRenewalInfoCard" style="display: none; background: #f8f9fa; border: 1px solid var(--sp-border-color); border-radius: var(--sp-radius); padding: 14px; margin-top: -8px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <strong id="ren_card_name" style="font-size: 14px;">Member Name</strong>
+                                <span id="ren_card_empid" style="font-size: 11px; color: var(--sp-text-muted); font-family: monospace; display: block;">MEM-0000</span>
+                            </div>
+                            <span class="sp-badge sp-badge-active">Verified Member</span>
                         </div>
-                        <span class="sp-badge sp-badge-active">Verified Member</span>
                     </div>
-                    <div class="sp-grid-3" style="font-size: 12px;">
-                        <div><strong>Mobile:</strong> <span id="ren_card_phone">N/A</span></div>
-                        <div><strong>Email:</strong> <span id="ren_card_email">N/A</span></div>
-                        <div><strong>Health Profile:</strong> <span id="ren_card_health">Normal</span></div>
+                </div>
+
+                <!-- New Member Form Section -->
+                <div id="spNewMemberBox" style="margin-bottom: 20px;">
+                    <div class="sp-grid-2">
+                        <div class="sp-form-group">
+                            <input type="text" id="sp_member_name" name="member_name" class="sp-floating-input" placeholder=" ">
+                            <label for="sp_member_name" class="sp-floating-label">Member Full Name *</label>
+                        </div>
+
+                        <div class="sp-form-group">
+                            <input type="text" id="sp_member_phone" name="member_phone" class="sp-floating-input" placeholder=" ">
+                            <label for="sp_member_phone" class="sp-floating-label">Mobile Number *</label>
+                        </div>
                     </div>
+
+                    <div class="sp-grid-2">
+                        <div class="sp-form-group">
+                            <input type="date" id="sp_member_dob" name="member_dob" class="sp-floating-input">
+                            <label for="sp_member_dob" class="sp-floating-label">Date of Birth</label>
+                        </div>
+
+                        <div class="sp-form-group">
+                            <input type="text" id="sp_member_id" name="member_id" class="sp-floating-input" placeholder=" ">
+                            <label for="sp_member_id" class="sp-floating-label">Member ID (Auto-generated YYYYXXX if empty)</label>
+                        </div>
+                    </div>
+
+                    <div class="sp-grid-2">
+                        <div class="sp-form-group">
+                            <input type="email" id="sp_member_email" name="member_email" class="sp-floating-input" placeholder=" ">
+                            <label for="sp_member_email" class="sp-floating-label">Account Email (Optional)</label>
+                        </div>
+
+                        <div class="sp-form-group">
+                            <input type="text" id="sp_member_password" name="member_password" class="sp-floating-input" placeholder=" ">
+                            <label for="sp_member_password" class="sp-floating-label">Initial Login Password</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="sp-btn sp-btn-primary" onclick="goToSubStep(2)">Next: Program & Dates &rarr;</button>
                 </div>
             </div>
 
-            <!-- New Member Form Section -->
-            <div id="spNewMemberBox" style="margin-bottom: 20px;">
-                <div class="sp-grid-2">
-                    <div class="sp-form-group">
-                        <input type="text" id="sp_member_name" name="member_name" class="sp-floating-input" placeholder=" ">
-                        <label for="sp_member_name" class="sp-floating-label">Member Full Name *</label>
-                    </div>
-
-                    <div class="sp-form-group">
-                        <input type="text" id="sp_member_phone" name="member_phone" class="sp-floating-input" placeholder=" ">
-                        <label for="sp_member_phone" class="sp-floating-label">Mobile Number *</label>
-                    </div>
-                </div>
+            <!-- STEP 2: PROGRAM & DATES SELECTION -->
+            <div id="sub_step_2" style="display: none;">
+                <h4 style="margin: 0 0 14px 0; font-size: 14px;">Select Program & Duration</h4>
 
                 <div class="sp-grid-2">
                     <div class="sp-form-group">
-                        <input type="date" id="sp_member_dob" name="member_dob" class="sp-floating-input">
-                        <label for="sp_member_dob" class="sp-floating-label">Date of Birth</label>
-                    </div>
-
-                    <div class="sp-form-group">
-                        <input type="text" id="sp_member_id" name="member_id" class="sp-floating-input" placeholder=" ">
-                        <label for="sp_member_id" class="sp-floating-label">Member ID (Auto-generated if empty)</label>
-                    </div>
-                </div>
-
-                <div class="sp-form-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                    <input type="checkbox" id="sp_activate_account" name="activate_account" value="1" checked onchange="toggleActivationFields()">
-                    <label for="sp_activate_account" style="font-size: 13px; font-weight: 600;">Enable Login Account Credentials</label>
-                </div>
-
-                <div id="spActivationFields" class="sp-grid-2">
-                    <div class="sp-form-group">
-                        <input type="email" id="sp_member_email" name="member_email" class="sp-floating-input" placeholder=" ">
-                        <label for="sp_member_email" class="sp-floating-label">Account Email</label>
-                    </div>
-
-                    <div class="sp-form-group">
-                        <input type="text" id="sp_member_password" name="member_password" class="sp-floating-input" placeholder=" ">
-                        <label for="sp_member_password" class="sp-floating-label">Initial Password</label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Program & Subscription Details Panel -->
-            <div style="border-top: 1px solid var(--sp-border-color); padding-top: 16px; margin-top: 8px;">
-                <h4 style="margin: 0 0 14px 0; font-size: 14px;">Program & Plan Details</h4>
-
-                <div class="sp-grid-2">
-                    <div class="sp-form-group">
-                        <select id="sp_sub_program_id" name="program_id" class="sp-floating-select" onchange="onProgramChange()">
+                        <select id="sp_sub_program_id" name="program_id" class="sp-floating-select" style="min-width: 100%;" onchange="onProgramChange()">
                             <option value="0" data-name="Custom Plan" data-duration="30" data-sessions="12">General / Custom Program</option>
                             <?php foreach ($programsList as $p) : ?>
                                 <option value="<?php echo esc_attr($p['id']); ?>"
@@ -270,7 +278,7 @@ foreach ((array)$curr_u->roles as $r) {
 
                 <div class="sp-grid-2">
                     <div class="sp-form-group">
-                        <select id="sp_sub_branch_id" name="branch_id" class="sp-floating-select">
+                        <select id="sp_sub_branch_id" name="branch_id" class="sp-floating-select" style="min-width: 100%;">
                             <option value="0">All Branches</option>
                             <?php foreach ($branchesList as $b) : ?>
                                 <option value="<?php echo esc_attr($b['id']); ?>"><?php echo esc_html($b['branch_name']); ?></option>
@@ -280,7 +288,7 @@ foreach ((array)$curr_u->roles as $r) {
                     </div>
 
                     <div class="sp-form-group">
-                        <select id="sp_subscription_type" name="subscription_type" class="sp-floating-select">
+                        <select id="sp_subscription_type" name="subscription_type" class="sp-floating-select" style="min-width: 100%;">
                             <option value="monthly">Monthly</option>
                             <option value="quarterly">Quarterly</option>
                             <option value="annual">Annual</option>
@@ -302,14 +310,24 @@ foreach ((array)$curr_u->roles as $r) {
                     </div>
                 </div>
 
+                <div style="display: flex; justify-content: space-between; gap: 10px;">
+                    <button type="button" class="sp-btn sp-btn-secondary" onclick="goToSubStep(1)">&larr; Back: Member Info</button>
+                    <button type="button" class="sp-btn sp-btn-primary" onclick="goToSubStep(3)">Next: Payment & Review &rarr;</button>
+                </div>
+            </div>
+
+            <!-- STEP 3: PAYMENT & REVIEW -->
+            <div id="sub_step_3" style="display: none;">
+                <h4 style="margin: 0 0 14px 0; font-size: 14px;">Pricing Fee & Summary Review</h4>
+
                 <div class="sp-grid-2">
                     <div class="sp-form-group">
-                        <input type="number" step="0.01" id="sp_sub_price" name="price" class="sp-floating-input" placeholder=" " value="0.00">
-                        <label for="sp_sub_price" class="sp-floating-label">Price / Subscription Fee (AED) *</label>
+                        <input type="number" step="0.01" id="sp_sub_price" name="price" class="sp-floating-input" placeholder=" " value="0.00" oninput="updateVatPreview()">
+                        <label for="sp_sub_price" class="sp-floating-label">Price / Fee (AED) *</label>
                     </div>
 
                     <div class="sp-form-group">
-                        <select id="sp_sub_status" name="status" class="sp-floating-select">
+                        <select id="sp_sub_status" name="status" class="sp-floating-select" style="min-width: 100%;">
                             <option value="active">Active</option>
                             <option value="expired">Expired</option>
                             <option value="cancelled">Cancelled</option>
@@ -318,21 +336,36 @@ foreach ((array)$curr_u->roles as $r) {
                     </div>
                 </div>
 
+                <div style="background: #f8fafc; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <span style="color: var(--sp-text-muted);">Base Amount:</span>
+                        <strong id="sub_base_preview">AED 0.00</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <span style="color: var(--sp-text-muted);">5% UAE VAT:</span>
+                        <strong id="sub_vat_preview">AED 0.00</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--sp-border-color); padding-top: 6px;">
+                        <strong>Total Amount Payable:</strong>
+                        <strong id="sub_total_preview" style="color: var(--sp-primary-color); font-size: 15px;">AED 0.00</strong>
+                    </div>
+                </div>
+
                 <div class="sp-form-group">
-                    <textarea id="sp_sub_notes" name="notes" class="sp-floating-input" style="height: 60px;" placeholder=" "></textarea>
+                    <textarea id="sp_sub_notes" name="notes" class="sp-floating-input" style="height: 50px;" placeholder=" "></textarea>
                     <label for="sp_sub_notes" class="sp-floating-label">Subscription Notes</label>
                 </div>
-            </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--sp-border-color); padding-top: 16px;">
-                <button type="button" class="sp-btn sp-btn-secondary" onclick="spCloseModal('spSubModal')">Cancel</button>
-                <button type="submit" class="sp-btn sp-btn-primary">Save & Generate Invoice</button>
+                <div style="display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--sp-border-color); padding-top: 16px;">
+                    <button type="button" class="sp-btn sp-btn-secondary" onclick="goToSubStep(2)">&larr; Back: Program & Dates</button>
+                    <button type="submit" class="sp-btn sp-btn-primary">Confirm & Generate Invoice</button>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Dedicated A5 Invoice Printable Modal (148mm x 210mm Printable Format) -->
+<!-- Dedicated A5 Invoice Printable Modal -->
 <div id="spInvoiceModal" class="sp-modal">
     <div class="sp-modal-content" style="max-width: 520px; padding: 0; overflow: hidden; border-radius: var(--sp-radius);" id="spPrintableInvoiceModal">
         <div class="sp-modal-header sp-no-print" style="padding: 16px 20px; margin: 0; background: var(--sp-bg-main);">
@@ -341,7 +374,6 @@ foreach ((array)$curr_u->roles as $r) {
         </div>
 
         <div style="padding: 24px; background: #ffffff; color: #111827;" id="spA5InvoiceSheet">
-            <!-- Invoice Header -->
             <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #000000; padding-bottom: 12px; margin-bottom: 16px;">
                 <div>
                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -357,7 +389,6 @@ foreach ((array)$curr_u->roles as $r) {
                 </div>
             </div>
 
-            <!-- Member Details Grid -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 12px; margin-bottom: 16px;">
                 <div>
                     <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Member Name</span>
@@ -377,7 +408,6 @@ foreach ((array)$curr_u->roles as $r) {
                 </div>
             </div>
 
-            <!-- Itemized Financial Breakdown -->
             <table style="width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 16px;">
                 <thead>
                     <tr style="background: #000; color: #fff;">
@@ -406,12 +436,8 @@ foreach ((array)$curr_u->roles as $r) {
             </div>
         </div>
 
-        <!-- Action Bar -->
         <div style="padding: 12px 20px; background: var(--sp-bg-main); border-top: 1px solid var(--sp-border-color); display: flex; gap: 8px; justify-content: flex-end;" class="sp-no-print">
-            <button type="button" class="sp-btn sp-btn-secondary sp-btn-sm" onclick="window.print()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                Print A5 Invoice
-            </button>
+            <button type="button" class="sp-btn sp-btn-secondary sp-btn-sm" onclick="window.print()">Print A5 Invoice</button>
             <button type="button" class="sp-btn sp-btn-secondary sp-btn-sm" onclick="openA6CardFromInvoice()">View Membership Card</button>
             <a id="inv_whatsapp_link" href="#" target="_blank" class="sp-btn sp-btn-primary sp-btn-sm" style="background-color: #16a34a; border-color: #16a34a;">Share WhatsApp</a>
             <button type="button" class="sp-btn sp-btn-secondary sp-btn-sm" onclick="spCloseModal('spInvoiceModal'); location.reload();">Done</button>
@@ -419,7 +445,7 @@ foreach ((array)$curr_u->roles as $r) {
     </div>
 </div>
 
-<!-- Dedicated A6 Membership Card Printable Modal (105mm x 148mm Format) -->
+<!-- Dedicated A6 Membership Card Printable Modal -->
 <div id="spCardModal" class="sp-modal">
     <div class="sp-modal-content" style="max-width: 420px; padding: 0; background: #ffffff; border-radius: 12px; overflow: hidden; border: 2px solid #000000;" id="spPrintableCardModal">
         <div class="sp-modal-header sp-no-print" style="padding: 12px 16px; margin: 0; background: var(--sp-bg-main);">
@@ -428,7 +454,6 @@ foreach ((array)$curr_u->roles as $r) {
         </div>
 
         <div id="spA6CardSheet">
-            <!-- Card Branding Header -->
             <div style="background: #000000; color: #ffffff; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <div style="width: 32px; height: 32px; background: #ffffff; color: #000000; font-weight: 800; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px;">S</div>
@@ -440,7 +465,6 @@ foreach ((array)$curr_u->roles as $r) {
                 <span id="card_branch_badge" style="font-size: 10px; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 4px;">Main Branch</span>
             </div>
 
-            <!-- Card Body Info -->
             <div style="padding: 20px; font-size: 13px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
                     <div>
@@ -472,7 +496,6 @@ foreach ((array)$curr_u->roles as $r) {
                     </div>
                 </div>
 
-                <!-- Barcode Graphics -->
                 <div style="text-align: center; border-top: 1px dashed #e5e7eb; padding-top: 12px;">
                     <div id="card_barcode_lines" style="display: flex; justify-content: center; gap: 2px; height: 45px; margin-bottom: 6px;"></div>
                     <span id="card_barcode_text" style="font-family: monospace; font-size: 12px; font-weight: 700; letter-spacing: 2px; color: #000000;">*MEM-1001*</span>
@@ -480,7 +503,6 @@ foreach ((array)$curr_u->roles as $r) {
             </div>
         </div>
 
-        <!-- Card Actions -->
         <div style="padding: 12px 20px; background: #f8f9fa; border-top: 1px solid #e5e7eb; display: flex; gap: 8px; justify-content: flex-end;" class="sp-no-print">
             <button type="button" class="sp-btn sp-btn-secondary sp-btn-sm" onclick="window.print()">Print A6 Card</button>
             <a id="card_whatsapp_link" href="#" target="_blank" class="sp-btn sp-btn-primary sp-btn-sm" style="background-color: #16a34a; border-color: #16a34a;">Share WhatsApp</a>
@@ -490,6 +512,65 @@ foreach ((array)$curr_u->roles as $r) {
 </div>
 
 <script>
+var currentSubStep = 1;
+
+function goToSubStep(stepNum) {
+    currentSubStep = stepNum;
+    jQuery('#sub_step_1, #sub_step_2, #sub_step_3').hide();
+    jQuery('#sub_step_' + stepNum).show();
+
+    jQuery('.sp-step-tab').css({ background: 'transparent', color: 'var(--sp-text-muted)', boxShadow: 'none' });
+    jQuery('#step_tab_' + stepNum).css({ background: '#ffffff', color: '#0284c7', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' });
+
+    if (window.spUpdateFloatingLabels) spUpdateFloatingLabels();
+}
+
+function saveSubDraft() {
+    var data = {
+        member_name: jQuery('#sp_member_name').val(),
+        member_phone: jQuery('#sp_member_phone').val(),
+        member_dob: jQuery('#sp_member_dob').val(),
+        member_id: jQuery('#sp_member_id').val(),
+        member_email: jQuery('#sp_member_email').val(),
+        plan_name: jQuery('#sp_plan_name').val(),
+        program_id: jQuery('#sp_sub_program_id').val(),
+        price: jQuery('#sp_sub_price').val(),
+        notes: jQuery('#sp_sub_notes').val(),
+        sub_type: jQuery('#sp_subscription_type').val()
+    };
+    try {
+        localStorage.setItem('sportedia_sub_draft', JSON.stringify(data));
+    } catch(e) {}
+}
+
+function loadSubDraft() {
+    try {
+        var raw = localStorage.getItem('sportedia_sub_draft');
+        if (raw) {
+            var data = JSON.parse(raw);
+            if (data.member_name && !jQuery('#sp_member_name').val()) jQuery('#sp_member_name').val(data.member_name);
+            if (data.member_phone && !jQuery('#sp_member_phone').val()) jQuery('#sp_member_phone').val(data.member_phone);
+            if (data.member_dob && !jQuery('#sp_member_dob').val()) jQuery('#sp_member_dob').val(data.member_dob);
+            if (data.member_id && !jQuery('#sp_member_id').val()) jQuery('#sp_member_id').val(data.member_id);
+            if (data.member_email && !jQuery('#sp_member_email').val()) jQuery('#sp_member_email').val(data.member_email);
+            if (data.plan_name && !jQuery('#sp_plan_name').val()) jQuery('#sp_plan_name').val(data.plan_name);
+            if (data.price && !jQuery('#sp_sub_price').val()) jQuery('#sp_sub_price').val(data.price);
+            if (data.notes && !jQuery('#sp_sub_notes').val()) jQuery('#sp_sub_notes').val(data.notes);
+            if (window.spUpdateFloatingLabels) spUpdateFloatingLabels();
+        }
+    } catch(e) {}
+}
+
+function updateVatPreview() {
+    var price = parseFloat(jQuery('#sp_sub_price').val()) || 0;
+    var basePrice = (price / 1.05).toFixed(2);
+    var vat = (price - basePrice).toFixed(2);
+
+    jQuery('#sub_base_preview').text('AED ' + basePrice);
+    jQuery('#sub_vat_preview').text('AED ' + vat);
+    jQuery('#sub_total_preview').text('AED ' + price.toFixed(2));
+}
+
 function setSubMode(mode) {
     if (mode === 'renewal') {
         jQuery('#sp_is_renewal').val('1');
@@ -512,20 +593,9 @@ function onRenewalMemberSelect() {
     if ($opt.val()) {
         jQuery('#ren_card_name').text($opt.data('name') || 'Member');
         jQuery('#ren_card_empid').text($opt.data('empid') || 'MEM-0000');
-        jQuery('#ren_card_phone').text($opt.data('phone') || 'N/A');
-        jQuery('#ren_card_email').text($opt.data('email') || 'N/A');
-        jQuery('#ren_card_health').text($opt.data('health') || 'Normal');
         jQuery('#spRenewalInfoCard').slideDown(150);
     } else {
         jQuery('#spRenewalInfoCard').slideUp(150);
-    }
-}
-
-function toggleActivationFields() {
-    if (jQuery('#sp_activate_account').is(':checked')) {
-        jQuery('#spActivationFields').show();
-    } else {
-        jQuery('#spActivationFields').hide();
     }
 }
 
@@ -557,12 +627,14 @@ function calculateEndDate() {
 }
 
 function openSubModal() {
-    jQuery('#spSubModalTitle').text('Add New Subscription');
+    jQuery('#spSubModalTitle').text('New Member Registration & Subscription');
     jQuery('#sp_sub_id').val('0');
     jQuery('#spSubForm')[0].reset();
     jQuery('#sp_start_date').val(new Date().toISOString().split('T')[0]);
     setSubMode('new');
+    goToSubStep(1);
     calculateEndDate();
+    loadSubDraft();
     spOpenModal('spSubModal');
 }
 
@@ -580,7 +652,9 @@ function editSub(s) {
     jQuery('#sp_sub_notes').val(s.notes || '');
     jQuery('#sp_sub_status').val(s.status);
     setSubMode('renewal');
+    goToSubStep(1);
     onRenewalMemberSelect();
+    updateVatPreview();
     spOpenModal('spSubModal');
 }
 
@@ -686,6 +760,7 @@ jQuery('#spSubForm').on('submit', function(e) {
     var formData = jQuery(this).serialize() + '&action=sportedia_save_subscription&nonce=' + sportedia_vars.nonce;
     jQuery.post(sportedia_vars.ajax_url, formData, function(response) {
         if (response.success) {
+            try { localStorage.removeItem('sportedia_sub_draft'); } catch(e) {}
             var res = response.data;
             latestSubData = res;
             spCloseModal('spSubModal');
