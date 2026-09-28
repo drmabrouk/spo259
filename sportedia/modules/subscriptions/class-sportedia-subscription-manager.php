@@ -146,7 +146,7 @@ class Sportedia_Subscription_Manager {
                 }
 
                 if (empty($member_id)) {
-                    $member_id = 'MEM-' . date('Ym') . rand(100, 999);
+                    $member_id = Sportedia_User_Manager::get_next_member_id('MEM-');
                 }
 
                 // Create WP User account so member appears in System Users
@@ -287,6 +287,8 @@ class Sportedia_Subscription_Manager {
 
         $raw_barcode = isset($_POST['member_barcode']) ? sanitize_text_field($_POST['member_barcode']) : '';
         $barcode = trim($raw_barcode, " *\t\n\r\0\x0B");
+        $force_scan = isset($_POST['force']) && $_POST['force'] === '1';
+        $req_sub_id = isset($_POST['subscription_id']) ? intval($_POST['subscription_id']) : 0;
 
         if (empty($barcode)) {
             wp_send_json_error('Please scan or enter a valid Member ID / Barcode.');
@@ -323,7 +325,6 @@ class Sportedia_Subscription_Manager {
         $emp_id = get_user_meta($member_id, 'sportedia_employee_id', true);
         if (empty($emp_id)) $emp_id = 'MEM-' . $member_id;
 
-        // Find active subscription
         global $wpdb;
         $subs_table = $wpdb->prefix . 'sportedia_subscriptions';
         $att_table  = $wpdb->prefix . 'sportedia_attendance';
@@ -331,12 +332,18 @@ class Sportedia_Subscription_Manager {
         self::auto_update_expired_subscriptions();
 
         $today = date('Y-m-d');
-        $sub = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $subs_table WHERE user_id = %d AND status = 'active' AND start_date <= %s AND end_date >= %s ORDER BY id DESC LIMIT 1",
-            $member_id,
-            $today,
-            $today
-        ), ARRAY_A);
+
+        // Check if specific sub_id requested or fetch active sub
+        if ($req_sub_id > 0) {
+            $sub = $wpdb->get_row($wpdb->prepare("SELECT * FROM $subs_table WHERE id = %d AND user_id = %d", $req_sub_id, $member_id), ARRAY_A);
+        } else {
+            $sub = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM $subs_table WHERE user_id = %d AND status = 'active' AND start_date <= %s AND end_date >= %s ORDER BY id DESC LIMIT 1",
+                $member_id,
+                $today,
+                $today
+            ), ARRAY_A);
+        }
 
         if (!$sub) {
             wp_send_json_error('No active subscription found or plan expired for member: ' . $member->display_name);
@@ -352,6 +359,23 @@ class Sportedia_Subscription_Manager {
             wp_send_json_error('No sessions remaining for member: ' . $member->display_name);
         }
 
+        // Duplicate same-day scan check
+        if (!$force_scan) {
+            $same_day_scan = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM $att_table WHERE user_id = %d AND program_id = %d AND attendance_date = %s",
+                $member_id,
+                intval($sub['program_id']),
+                $today
+            ));
+
+            if ($same_day_scan) {
+                wp_send_json_error(array(
+                    'type'    => 'duplicate_scan_confirm',
+                    'message' => 'Attendance for ' . $member->display_name . ' (' . $sub['plan_name'] . ') has already been recorded today. Record another session deduction?'
+                ));
+            }
+        }
+
         // Deduct 1 session
         $new_used = $used_sessions + 1;
         $new_remaining = $total_sessions - $new_used;
@@ -363,17 +387,22 @@ class Sportedia_Subscription_Manager {
 
         $wpdb->update($subs_table, $update_data, array('id' => $sub['id']));
 
+        $now_time = date('Y-m-d H:i:s');
+
         // Record attendance entry
         $wpdb->insert($att_table, array(
             'branch_id'                => intval($sub['branch_id']),
             'program_id'               => intval($sub['program_id']),
             'user_id'                  => $member_id,
             'user_type'                => 'customer',
-            'attendance_date'          => date('Y-m-d'),
-            'check_in_time'            => date('Y-m-d H:i:s'),
+            'attendance_date'          => $today,
+            'check_in_time'            => $now_time,
             'status'                   => 'present',
             'checked_in_by'            => get_current_user_id()
         ));
+
+        $coach_user = !empty($sub['coach_id']) ? get_userdata($sub['coach_id']) : null;
+        $coach_name = $coach_user ? $coach_user->display_name : 'Assigned Coach';
 
         Sportedia_DB::log_activity('member_session_verified', 'Deducted 1 session for member ' . $member->display_name . ' (' . $emp_id . '). Remaining: ' . $new_remaining, $member_id);
 
@@ -384,6 +413,10 @@ class Sportedia_Subscription_Manager {
             'subscription_id'    => $sub['id'],
             'invoice_number'     => !empty($sub['invoice_number']) ? $sub['invoice_number'] : ('SUB-' . $sub['id']),
             'plan_name'          => $sub['plan_name'],
+            'sport'              => $sub['plan_name'],
+            'coach_name'         => $coach_name,
+            'attendance_date'    => $today,
+            'attendance_time'    => date('H:i:s', strtotime($now_time)),
             'sessions_count'     => $total_sessions,
             'sessions_used'      => $new_used,
             'sessions_remaining' => $new_remaining
