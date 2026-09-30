@@ -87,6 +87,30 @@ class Sportedia_Page_Generator {
             wp_update_post(array('ID' => $mem_page_id, 'post_status' => 'publish'));
         }
 
+        // 4. Tournament Registration Page ('sportedia-tournament') -> <!-- sportedia_tournament -->
+        $tourn_page_id = get_option('sportedia_tournament_page_id');
+        if (!$tourn_page_id || !get_post($tourn_page_id)) {
+            $tourn_by_slug = get_page_by_path('sportedia-tournament');
+            if ($tourn_by_slug) {
+                update_option('sportedia_tournament_page_id', $tourn_by_slug->ID);
+            } else {
+                $tourn_data = array(
+                    'post_title'     => 'Tournament Registration',
+                    'post_name'      => 'sportedia-tournament',
+                    'post_content'   => '<!-- sportedia_tournament -->[sportedia_tournament]',
+                    'post_status'    => 'publish',
+                    'post_type'      => 'page',
+                    'comment_status' => 'closed'
+                );
+                $new_tourn_id = wp_insert_post($tourn_data);
+                if ($new_tourn_id && !is_wp_error($new_tourn_id)) {
+                    update_option('sportedia_tournament_page_id', $new_tourn_id);
+                }
+            }
+        } else if (get_post_status($tourn_page_id) !== 'publish') {
+            wp_update_post(array('ID' => $tourn_page_id, 'post_status' => 'publish'));
+        }
+
         return get_option('sportedia_page_id');
     }
 }

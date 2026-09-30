@@ -44,6 +44,11 @@ $nav_items = array(
         'icon'  => '<svg class="sp-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>',
         'cap'   => 'sportedia_manage_programs'
     ),
+    'tournaments' => array(
+        'label' => 'Tournament Management',
+        'icon'  => '<svg class="sp-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H7.5"/><path d="M14 14.66V17c0 .55.45 1 1 1h1.5"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></svg>',
+        'cap'   => 'sportedia_access'
+    ),
     'branches' => array(
         'label' => 'Branch Management',
         'icon'  => '<svg class="sp-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 21h18M3 7v14M21 7v14M6 21V11m4 10V11m4 10V11m4 10V11M12 3L2 7h20L12 3z"/></svg>',

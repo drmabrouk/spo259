@@ -40,6 +40,10 @@ class Sportedia_Import_Export {
             'sec_coaches'    => $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sportedia_sec_coaches", ARRAY_A),
             'sec_branches'   => $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sportedia_sec_branches", ARRAY_A),
             'sec_attendance' => $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sportedia_sec_attendance", ARRAY_A),
+            'tournaments'    => $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sportedia_tournaments", ARRAY_A),
+            'tournament_teams' => $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sportedia_tournament_teams", ARRAY_A),
+            'tournament_players' => $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sportedia_tournament_players", ARRAY_A),
+            'tournament_fixtures' => $wpdb->get_results("SELECT * FROM {$wpdb->prefix}sportedia_tournament_fixtures", ARRAY_A),
         );
 
         Sportedia_DB::log_activity('json_backup_export', 'Exported full JSON system backup.');

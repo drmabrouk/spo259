@@ -233,6 +233,19 @@ class Sportedia_Attendance_Manager {
     public function ajax_get_payroll_report() {
         check_ajax_referer('sportedia_nonce', 'nonce');
 
+        $curr_u = wp_get_current_user();
+        $allowed_roles = array('sportedia_sys_admin', 'sportedia_general_mgr', 'sportedia_hr_officer', 'sportedia_finance_mgr', 'administrator');
+        $has_perm = false;
+        foreach ((array)$curr_u->roles as $r) {
+            if (in_array($r, $allowed_roles, true) || current_user_can('manage_options')) {
+                $has_perm = true;
+                break;
+            }
+        }
+        if (!$has_perm) {
+            wp_send_json_error('Unauthorized. Access to employee payroll figures is restricted to authorized HR, Finance, and Management staff.');
+        }
+
         $user_id    = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
         $month_year = isset($_POST['month_year']) ? sanitize_text_field($_POST['month_year']) : date('Y-m');
 

@@ -8,6 +8,7 @@ class Sportedia_Template_Loader {
         add_shortcode('sportedia_app', array($this, 'shortcode_app'));
         add_shortcode('sportedia_kiosk', array($this, 'shortcode_kiosk'));
         add_shortcode('sportedia_member', array($this, 'shortcode_member'));
+        add_shortcode('sportedia_tournament', array($this, 'shortcode_tournament'));
     }
 
     public static function is_dashboard_page() {
@@ -53,11 +54,28 @@ class Sportedia_Template_Loader {
         return false;
     }
 
+    public static function is_tournament_page() {
+        global $post;
+        $tourn_id = get_option('sportedia_tournament_page_id');
+
+        if (is_page($tourn_id) || is_page('sportedia-tournament')) {
+            return true;
+        }
+        if ($post && (has_shortcode($post->post_content, 'sportedia_tournament') || strpos($post->post_content, '<!-- sportedia_tournament -->') !== false)) {
+            return true;
+        }
+        return false;
+    }
+
     public static function is_sportedia_page() {
-        return self::is_dashboard_page() || self::is_kiosk_page() || self::is_member_portal_page();
+        return self::is_dashboard_page() || self::is_kiosk_page() || self::is_member_portal_page() || self::is_tournament_page();
     }
 
     public function load_sportedia_template($template) {
+        if (self::is_tournament_page()) {
+            return SPORTEDIA_PLUGIN_DIR . 'templates/tournament-public.php';
+        }
+
         if (self::is_member_portal_page()) {
             return SPORTEDIA_PLUGIN_DIR . 'templates/member-portal.php';
         }
@@ -104,6 +122,12 @@ class Sportedia_Template_Loader {
         }
         ob_start();
         include SPORTEDIA_PLUGIN_DIR . 'templates/verification-system.php';
+        return ob_get_clean();
+    }
+
+    public function shortcode_tournament() {
+        ob_start();
+        include SPORTEDIA_PLUGIN_DIR . 'templates/tournament-public.php';
         return ob_get_clean();
     }
 }
