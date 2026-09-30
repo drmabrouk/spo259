@@ -83,7 +83,10 @@ $nav_items = array(
         <?php else : ?>
             <div class="sp-brand-logo"><?php echo esc_html(strtoupper(substr($branding_name, 0, 1))); ?></div>
         <?php endif; ?>
-        <div class="sp-brand-name"><?php echo esc_html($branding_name); ?></div>
+        <div>
+            <div class="sp-brand-name"><?php echo esc_html($branding_name); ?></div>
+            <div style="font-size: 10px; color: var(--sp-text-muted); font-weight: 500; margin-top: 1px; letter-spacing: 0.2px;">Sports Management System</div>
+        </div>
     </div>
 
     <nav class="sp-sidebar-nav">

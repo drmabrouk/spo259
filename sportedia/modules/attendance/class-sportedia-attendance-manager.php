@@ -18,6 +18,85 @@ class Sportedia_Attendance_Manager {
         add_action('wp_ajax_nopriv_sportedia_get_kiosk_qr', array($this, 'ajax_get_kiosk_qr'));
         add_action('wp_ajax_sportedia_process_employee_scan', array($this, 'ajax_process_employee_scan'));
         add_action('wp_ajax_sportedia_get_payroll_report', array($this, 'ajax_get_payroll_report'));
+        add_action('wp_ajax_sportedia_search_attendance', array($this, 'ajax_search_attendance'));
+    }
+
+    public function ajax_search_attendance() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        $search         = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
+        $att_date       = isset($_POST['att_date']) ? sanitize_text_field($_POST['att_date']) : date('Y-m-d');
+        $branch_filter  = isset($_POST['branch_filter']) ? intval($_POST['branch_filter']) : 0;
+        $program_filter = isset($_POST['program_filter']) ? intval($_POST['program_filter']) : 0;
+
+        $query = !empty($search) ? $search : $att_date;
+        $attendanceRecords = self::get_attendance($query, $branch_filter, $program_filter);
+
+        ob_start();
+        if (!empty($attendanceRecords)) :
+            foreach ($attendanceRecords as $att) : ?>
+                <tr>
+                    <td>
+                        <strong><?php echo esc_html($att['user_name']); ?></strong><br>
+                        <span style="font-size: 11px; color: var(--sp-text-muted);">ID: <?php echo esc_html($att['employee_id']); ?></span>
+                    </td>
+                    <td>
+                        <span style="font-size: 13px; display: block;"><?php echo esc_html($att['role_label']); ?></span>
+                        <span style="font-size: 11px; color: var(--sp-text-muted);"><?php echo esc_html($att['branch_name']); ?></span>
+                    </td>
+                    <td><?php echo esc_html($att['attendance_date']); ?></td>
+                    <td>
+                        <?php if (!empty($att['scheduled_start'])) : ?>
+                            <span style="font-size: 12px; font-weight: 600;"><?php echo esc_html($att['scheduled_start'] . ' - ' . $att['scheduled_end']); ?></span>
+                        <?php else : ?>
+                            <span style="color: var(--sp-text-muted); font-size: 12px;">Standard Shift</span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <div style="font-size: 12px;">
+                            <div><strong>In:</strong> <?php echo esc_html($att['check_in_time'] ? date('H:i', strtotime($att['check_in_time'])) : '-'); ?></div>
+                            <div><strong>Out:</strong> <?php echo esc_html($att['check_out_time'] ? date('H:i', strtotime($att['check_out_time'])) : 'Active'); ?></div>
+                        </div>
+                    </td>
+                    <td>
+                        <?php if ($att['lateness_minutes'] > 0) : ?>
+                            <span style="color: #991b1b; font-weight: 600; font-size: 12px;"><?php echo esc_html($att['lateness_minutes']); ?> mins</span>
+                        <?php else : ?>
+                            <span style="color: #166534; font-weight: 600; font-size: 12px;">On Time</span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php
+                        $dur = intval($att['working_duration_minutes']);
+                        if ($dur > 0) {
+                            $hrs = floor($dur / 60);
+                            $mins = $dur % 60;
+                            echo esc_html(($hrs > 0 ? $hrs . 'h ' : '') . $mins . 'm');
+                        } else {
+                            echo '<span style="color: var(--sp-text-muted); font-size: 12px;">In Progress</span>';
+                        }
+                        ?>
+                    </td>
+                    <td>
+                        <span class="sp-badge <?php echo $att['status'] === 'present' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                            <?php echo esc_html(ucfirst($att['status'])); ?>
+                        </span>
+                    </td>
+                    <?php if (Sportedia_Roles::is_sys_admin() || Sportedia_Roles::is_general_mgr()) : ?>
+                        <td style="text-align: right;">
+                            <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteAtt(<?php echo $att['id']; ?>)">Delete</button>
+                        </td>
+                    <?php endif; ?>
+                </tr>
+            <?php endforeach;
+        else : ?>
+            <tr>
+                <td colspan="9" style="text-align: center; color: var(--sp-text-muted); padding: 32px;">No employee attendance records found.</td>
+            </tr>
+        <?php endif;
+        $html = ob_get_clean();
+
+        wp_send_json_success(array('html' => $html, 'count' => count($attendanceRecords)));
     }
 
     public static function generate_attendance_qr_token($time = null) {

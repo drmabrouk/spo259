@@ -93,46 +93,60 @@ $kiosk_url = $kiosk_page_id ? get_permalink($kiosk_page_id) : home_url('/sported
     </div>
 </div>
 
-<!-- PROFESSIONAL FINANCIAL & INSTITUTIONAL KPI CARDS GRID -->
-<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px;">
-    <!-- FINANCIAL KPI CARD: Monthly Institutional Revenue -->
-    <div class="sp-card" style="margin-bottom:0; padding: 20px; border-top: 3px solid #0284c7;">
+<!-- PROFESSIONAL FINANCIAL & INSTITUTIONAL KPI CARDS GRID (EXACTLY 5 BOXES ON DESKTOP ROW) -->
+<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 24px;" class="sp-kpi-grid">
+    <!-- 1. TODAY'S ATTENDANCE -->
+    <div class="sp-card" style="margin-bottom:0; padding: 18px 16px; border-top: 3px solid #6366f1;">
+        <div style="font-size: 10px; color: var(--sp-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;">TODAY'S ATTENDANCE</div>
+        <div style="font-size: 26px; font-weight: 800; margin: 8px 0 4px 0; color: #0f172a;"><?php echo esc_html($stats['today_att']); ?></div>
+        <div style="font-size: 11px; color: var(--sp-text-muted);">Check-ins Today</div>
+    </div>
+
+    <!-- 2. REMAINING SESSIONS -->
+    <div class="sp-card" style="margin-bottom:0; padding: 18px 16px; border-top: 3px solid #f59e0b;">
+        <div style="font-size: 10px; color: var(--sp-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;">REMAINING SESSIONS</div>
+        <div style="font-size: 26px; font-weight: 800; margin: 8px 0 4px 0; color: #166534;"><?php echo esc_html($stats['total_sessions_remaining']); ?></div>
+        <div style="font-size: 11px; color: var(--sp-text-muted);">Available Sessions</div>
+    </div>
+
+    <!-- 3. ACTIVE SUBSCRIPTIONS -->
+    <div class="sp-card" style="margin-bottom:0; padding: 18px 16px; border-top: 3px solid #10b981;">
+        <div style="font-size: 10px; color: var(--sp-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;">ACTIVE SUBSCRIPTIONS</div>
+        <div style="font-size: 26px; font-weight: 800; margin: 8px 0 4px 0; color: #0f172a;"><?php echo esc_html($stats['total_subs']); ?></div>
+        <div style="font-size: 11px; color: #166534;">Active Subscriptions</div>
+    </div>
+
+    <!-- 4. MONTHLY REVENUE -->
+    <div class="sp-card" style="margin-bottom:0; padding: 18px 16px; border-top: 3px solid #0284c7;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <span style="font-size: 11px; color: var(--sp-text-muted); font-weight: 700; text-transform: uppercase;">MONTHLY REVENUE (<?php echo date('M Y'); ?>)</span>
-            <span class="sp-badge" style="background: <?php echo $trend_bg; ?>; color: <?php echo $trend_color; ?>; font-weight: 800;">
+            <span style="font-size: 10px; color: var(--sp-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;">MONTHLY REVENUE</span>
+            <span class="sp-badge" style="background: <?php echo $trend_bg; ?>; color: <?php echo $trend_color; ?>; font-weight: 800; font-size: 9px; padding: 2px 5px;">
                 <?php echo $arrow_symbol . ' ' . abs($pct_change) . '%'; ?>
             </span>
         </div>
-        <div style="font-size: 28px; font-weight: 800; margin: 10px 0 4px 0; color: #0f172a;">
+        <div style="font-size: 22px; font-weight: 800; margin: 8px 0 4px 0; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
             <?php echo esc_html(Sportedia_Finance::format_price($curr_revenue)); ?>
         </div>
-        <div style="font-size: 12px; color: var(--sp-text-muted);">
-            Previous Month: <strong><?php echo esc_html(Sportedia_Finance::format_price($prev_revenue)); ?></strong>
+        <div style="font-size: 11px; color: var(--sp-text-muted);">
+            Prev: <strong><?php echo esc_html(Sportedia_Finance::format_price($prev_revenue)); ?></strong>
         </div>
     </div>
 
-    <?php if (current_user_can('sportedia_manage_subscriptions') || Sportedia_Roles::is_sys_admin()) : ?>
-        <div class="sp-card" style="margin-bottom:0; padding: 20px; border-top: 3px solid #10b981;">
-            <div style="font-size: 11px; color: var(--sp-text-muted); font-weight: 700; text-transform: uppercase;">ACTIVE SUBSCRIPTIONS</div>
-            <div style="font-size: 28px; font-weight: 800; margin: 10px 0 4px 0; color: #0f172a;"><?php echo esc_html($stats['total_subs']); ?></div>
-            <div style="font-size: 12px; color: #166534;">Active Member Accounts</div>
-        </div>
-
-        <div class="sp-card" style="margin-bottom:0; padding: 20px; border-top: 3px solid #f59e0b;">
-            <div style="font-size: 11px; color: var(--sp-text-muted); font-weight: 700; text-transform: uppercase;">REMAINING SESSIONS</div>
-            <div style="font-size: 28px; font-weight: 800; margin: 10px 0 4px 0; color: #166534;"><?php echo esc_html($stats['total_sessions_remaining']); ?></div>
-            <div style="font-size: 12px; color: var(--sp-text-muted);">Total Available Member Sessions</div>
-        </div>
-    <?php endif; ?>
-
-    <?php if (current_user_can('sportedia_manage_attendance') || Sportedia_Roles::is_sys_admin()) : ?>
-        <div class="sp-card" style="margin-bottom:0; padding: 20px; border-top: 3px solid #6366f1;">
-            <div style="font-size: 11px; color: var(--sp-text-muted); font-weight: 700; text-transform: uppercase;">TODAY'S ATTENDANCE</div>
-            <div style="font-size: 28px; font-weight: 800; margin: 10px 0 4px 0; color: #0f172a;"><?php echo esc_html($stats['today_att']); ?></div>
-            <div style="font-size: 12px; color: var(--sp-text-muted);">Timestamped Check-ins Today</div>
-        </div>
-    <?php endif; ?>
+    <!-- 5. ACTIVE MEMBERS (NEW 5TH OPERATIONAL KPI) -->
+    <div class="sp-card" style="margin-bottom:0; padding: 18px 16px; border-top: 3px solid #8b5cf6;">
+        <div style="font-size: 10px; color: var(--sp-text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;">ACTIVE MEMBERS</div>
+        <div style="font-size: 26px; font-weight: 800; margin: 8px 0 4px 0; color: #0f172a;"><?php echo esc_html($stats['active_members']); ?></div>
+        <div style="font-size: 11px; color: var(--sp-text-muted);">Unique Enrolled Members</div>
+    </div>
 </div>
+
+<style>
+@media (max-width: 1200px) {
+    .sp-kpi-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+    }
+}
+</style>
 
 <?php
 $my_member_subs = array_filter($user_subs, function($s) use ($user_id) {

@@ -181,7 +181,13 @@ $error_msg = isset($_GET['login_error']) ? sanitize_text_field(urldecode($_GET['
                 </button>
             </div>
 
-            <button type="submit" name="sportedia_login_submit" class="sp-btn sp-btn-primary" style="width: 100%; padding: 12px; margin-top: 8px;">
+            <div style="display: flex; justify-content: flex-end; margin-top: -8px; margin-bottom: 16px;">
+                <button type="button" onclick="showForgotPasswordModal()" style="background: none; border: none; color: #0284c7; font-size: 12px; font-weight: 600; cursor: pointer; padding: 0;">
+                    Forgot Password?
+                </button>
+            </div>
+
+            <button type="submit" name="sportedia_login_submit" class="sp-btn sp-btn-primary" style="width: 100%; padding: 12px;">
                 Sign In to Sportedia
             </button>
 
@@ -190,6 +196,78 @@ $error_msg = isset($_GET['login_error']) ? sanitize_text_field(urldecode($_GET['
                 Sportedia operates in accordance with applicable policies, terms and conditions, and includes appropriate protection of user rights and system data.
             </p>
         </form>
+    </div>
+
+    <!-- FORGOT PASSWORD MODAL CONTAINER -->
+    <div id="spForgotModal" class="sp-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999; padding: 16px;">
+        <div class="sp-modal-content" style="max-width: 420px; width: 100%; background: #ffffff; border-radius: 12px; padding: 28px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative;">
+            <button type="button" class="sp-modal-close" onclick="closeForgotPasswordModal()" style="position: absolute; right: 16px; top: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b;">&times;</button>
+
+            <!-- STEP 1: EMAIL REQUEST -->
+            <div id="fp_step_1">
+                <h3 style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0;">Reset Staff Password</h3>
+                <p style="font-size: 12px; color: #64748b; margin: 0 0 20px 0;">Enter your registered staff email address to receive a 6-digit verification code.</p>
+
+                <div id="fp_msg_1" style="display: none; margin-bottom: 14px; font-size: 12px; padding: 10px 12px; border-radius: 6px;"></div>
+
+                <div class="sp-form-group">
+                    <input type="email" id="fp_email" class="sp-floating-input" placeholder=" " required>
+                    <label for="fp_email" class="sp-floating-label">Registered Staff Email *</label>
+                </div>
+
+                <button type="button" id="fp_btn_1" onclick="submitForgotEmail()" class="sp-btn sp-btn-primary" style="width: 100%; padding: 12px;">
+                    Send 6-Digit Code
+                </button>
+            </div>
+
+            <!-- STEP 2: 6-DIGIT OTP VERIFICATION -->
+            <div id="fp_step_2" style="display: none;">
+                <h3 style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0;">Enter Verification Code</h3>
+                <p style="font-size: 12px; color: #64748b; margin: 0 0 20px 0;">We sent a 6-digit security code to your email. Enter code below.</p>
+
+                <div id="fp_msg_2" style="display: none; margin-bottom: 14px; font-size: 12px; padding: 10px 12px; border-radius: 6px;"></div>
+
+                <div class="sp-form-group">
+                    <input type="text" id="fp_otp" maxlength="6" class="sp-floating-input" placeholder=" " style="letter-spacing: 6px; font-size: 20px; font-weight: 800; text-align: center; font-family: monospace;" required>
+                    <label for="fp_otp" class="sp-floating-label" style="text-align: center; width: 100%;">6-Digit Code *</label>
+                </div>
+
+                <button type="button" id="fp_btn_2" onclick="submitVerifyOTP()" class="sp-btn sp-btn-primary" style="width: 100%; padding: 12px; margin-bottom: 10px;">
+                    Verify Code
+                </button>
+                <div style="text-align: center;">
+                    <button type="button" onclick="submitForgotEmail()" style="background: none; border: none; color: #0284c7; font-size: 11px; font-weight: 600; cursor: pointer;">Resend Code</button>
+                </div>
+            </div>
+
+            <!-- STEP 3: NEW PASSWORD -->
+            <div id="fp_step_3" style="display: none;">
+                <h3 style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0;">Set New Password</h3>
+                <p style="font-size: 12px; color: #64748b; margin: 0 0 20px 0;">Create a strong new password for your Sportedia account.</p>
+
+                <div id="fp_msg_3" style="display: none; margin-bottom: 14px; font-size: 12px; padding: 10px 12px; border-radius: 6px;"></div>
+
+                <div class="sp-form-group sp-input-wrapper">
+                    <input type="password" id="fp_new_pass" class="sp-floating-input" placeholder=" " required style="padding-right: 42px;">
+                    <label for="fp_new_pass" class="sp-floating-label">New Password *</label>
+                    <button type="button" class="sp-input-icon-btn" onclick="togglePasswordVisibility('fp_new_pass', this)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+
+                <div class="sp-form-group sp-input-wrapper">
+                    <input type="password" id="fp_confirm_pass" class="sp-floating-input" placeholder=" " required style="padding-right: 42px;">
+                    <label for="fp_confirm_pass" class="sp-floating-label">Confirm New Password *</label>
+                    <button type="button" class="sp-input-icon-btn" onclick="togglePasswordVisibility('fp_confirm_pass', this)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+
+                <button type="button" id="fp_btn_3" onclick="submitResetPassword()" class="sp-btn sp-btn-primary" style="width: 100%; padding: 12px;">
+                    Save New Password
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- TAB 2: MEMBER PORTAL ACCESS -->
@@ -303,6 +381,127 @@ function stopCameraScanner() {
         cameraStream = null;
     }
     jQuery('#camera_scanner_container').hide();
+}
+
+// FORGOT PASSWORD MODAL HANDLERS
+var activeResetToken = '';
+
+function showForgotPasswordModal() {
+    jQuery('#spForgotModal').css('display', 'flex');
+    jQuery('#fp_step_1').show();
+    jQuery('#fp_step_2, #fp_step_3').hide();
+    jQuery('#fp_email').focus();
+}
+
+function closeForgotPasswordModal() {
+    jQuery('#spForgotModal').hide();
+}
+
+function showFpMessage(stepNum, msg, isError) {
+    var $box = jQuery('#fp_msg_' + stepNum);
+    $box.removeClass('sp-alert-error').css({
+        background: isError ? '#fef2f2' : '#dcfce7',
+        border: isError ? '1px solid #fecaca' : '1px solid #bbf7d0',
+        color: isError ? '#991b1b' : '#166534'
+    }).text(msg).show();
+}
+
+function submitForgotEmail() {
+    var email = jQuery('#fp_email').val();
+    if (!email) {
+        showFpMessage(1, 'Please enter your registered staff email address.', true);
+        return;
+    }
+
+    jQuery('#fp_btn_1').prop('disabled', true).text('Sending Code...');
+
+    jQuery.post('<?php echo esc_url(admin_url('admin-ajax.php')); ?>', {
+        action: 'sportedia_forgot_password_request',
+        email: email,
+        nonce: '<?php echo wp_create_nonce('sportedia_auth_nonce'); ?>'
+    }, function(res) {
+        jQuery('#fp_btn_1').prop('disabled', false).text('Send 6-Digit Code');
+        if (res.success) {
+            jQuery('#fp_step_1').hide();
+            jQuery('#fp_step_2').show();
+            showFpMessage(2, res.data || 'Verification code sent to your email.', false);
+            jQuery('#fp_otp').focus();
+        } else {
+            showFpMessage(1, res.data || 'Failed to request reset code.', true);
+        }
+    }).fail(function() {
+        jQuery('#fp_btn_1').prop('disabled', false).text('Send 6-Digit Code');
+        showFpMessage(1, 'Server communication error. Please try again.', true);
+    });
+}
+
+function submitVerifyOTP() {
+    var email = jQuery('#fp_email').val();
+    var otp = jQuery('#fp_otp').val();
+    if (!otp || otp.length !== 6) {
+        showFpMessage(2, 'Please enter the 6-digit code sent to your email.', true);
+        return;
+    }
+
+    jQuery('#fp_btn_2').prop('disabled', true).text('Verifying...');
+
+    jQuery.post('<?php echo esc_url(admin_url('admin-ajax.php')); ?>', {
+        action: 'sportedia_verify_otp',
+        email: email,
+        otp: otp,
+        nonce: '<?php echo wp_create_nonce('sportedia_auth_nonce'); ?>'
+    }, function(res) {
+        jQuery('#fp_btn_2').prop('disabled', false).text('Verify Code');
+        if (res.success && res.data && res.data.reset_token) {
+            activeResetToken = res.data.reset_token;
+            jQuery('#fp_step_2').hide();
+            jQuery('#fp_step_3').show();
+            showFpMessage(3, 'Code verified! Enter your new password below.', false);
+            jQuery('#fp_new_pass').focus();
+        } else {
+            showFpMessage(2, res.data || 'Invalid verification code.', true);
+        }
+    }).fail(function() {
+        jQuery('#fp_btn_2').prop('disabled', false).text('Verify Code');
+        showFpMessage(2, 'Server communication error. Please try again.', true);
+    });
+}
+
+function submitResetPassword() {
+    var email = jQuery('#fp_email').val();
+    var p1 = jQuery('#fp_new_pass').val();
+    var p2 = jQuery('#fp_confirm_pass').val();
+
+    if (!p1 || p1.length < 6) {
+        showFpMessage(3, 'Password must be at least 6 characters long.', true);
+        return;
+    }
+    if (p1 !== p2) {
+        showFpMessage(3, 'Passwords do not match.', true);
+        return;
+    }
+
+    jQuery('#fp_btn_3').prop('disabled', true).text('Updating Password...');
+
+    jQuery.post('<?php echo esc_url(admin_url('admin-ajax.php')); ?>', {
+        action: 'sportedia_reset_password',
+        email: email,
+        reset_token: activeResetToken,
+        password: p1,
+        nonce: '<?php echo wp_create_nonce('sportedia_auth_nonce'); ?>'
+    }, function(res) {
+        jQuery('#fp_btn_3').prop('disabled', false).text('Save New Password');
+        if (res.success) {
+            alert(res.data || 'Password updated successfully! Please sign in with your new password.');
+            closeForgotPasswordModal();
+            jQuery('#user_pass').focus();
+        } else {
+            showFpMessage(3, res.data || 'Failed to update password.', true);
+        }
+    }).fail(function() {
+        jQuery('#fp_btn_3').prop('disabled', false).text('Save New Password');
+        showFpMessage(3, 'Server communication error. Please try again.', true);
+    });
 }
 </script>
 

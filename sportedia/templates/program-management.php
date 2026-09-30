@@ -56,57 +56,43 @@ foreach ((array)$curr_u->roles as $r) {
     </form>
 </div>
 
-<!-- Cards Display (Exactly 2 Cards Per Row on Desktop) -->
+<!-- Unified Full-Width Extended Rows Layout (1 Row Per Program) -->
 <?php if (!empty($programs)) : ?>
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+    <div style="display: flex; flex-direction: column; gap: 12px;" id="programs_container">
         <?php foreach ($programs as $p) : ?>
-            <div class="sp-card" style="margin-bottom: 0; padding: 18px; border-radius: var(--sp-radius); display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                        <strong style="font-size: 16px; color: var(--sp-text-main);"><?php echo esc_html($p['program_name']); ?></strong>
-                        <span class="sp-badge <?php echo $p['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
-                            <?php echo esc_html(ucfirst($p['status'])); ?>
-                        </span>
-                    </div>
-
-                    <div style="margin-bottom: 12px;">
-                        <span class="sp-badge" style="background: #f3f4f6; border-color: #e5e7eb; color: #111;"><?php echo esc_html($p['category']); ?></span>
-                    </div>
-
-                    <div style="background: #f8f9fa; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 12px; font-size: 12px; margin-bottom: 14px;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                            <div>
-                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">BRANCH</span>
-                                <strong><?php echo esc_html($p['branch_name']); ?></strong>
-                            </div>
-                            <div>
-                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">COACH</span>
-                                <strong><?php echo esc_html($p['coach_name']); ?></strong>
-                            </div>
-                            <div>
-                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">SCHEDULE</span>
-                                <span><?php echo esc_html($p['schedule'] ? $p['schedule'] : 'Flexible'); ?></span>
-                            </div>
-                            <div>
-                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">CAPACITY</span>
-                                <span><?php echo esc_html($p['capacity']); ?> members</span>
-                            </div>
-                        </div>
-
-                        <?php if ($can_view_session_count) : ?>
-                            <div style="margin-top: 8px; border-top: 1px dashed var(--sp-border-color); padding-top: 6px; font-weight: 600; color: #166534;">
-                                <?php echo esc_html($p['sessions_count']); ?> Sessions (<?php echo esc_html($p['duration_days']); ?> Days Duration)
-                            </div>
-                        <?php endif; ?>
-                    </div>
+            <div class="sp-card" style="margin-bottom: 0; padding: 16px 20px; border-radius: var(--sp-radius); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                <div style="flex: 2; min-width: 220px;">
+                    <strong style="font-size: 15px; color: var(--sp-text-main); display: block;"><?php echo esc_html($p['program_name']); ?></strong>
+                    <span style="font-size: 11px; color: var(--sp-text-muted); text-transform: uppercase; font-weight: 600;"><?php echo esc_html($p['category']); ?></span>
                 </div>
 
-                <?php if (current_user_can('sportedia_manage_programs') || Sportedia_Roles::is_sys_admin()) : ?>
-                    <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--sp-border-color); padding-top: 10px; margin-top: auto;">
+                <div style="flex: 2; min-width: 200px;">
+                    <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Branch & Coach</span>
+                    <strong style="font-size: 13px; color: #000;"><?php echo esc_html($p['branch_name']); ?></strong>
+                    <span style="font-size: 11px; color: var(--sp-text-muted); display: block;">Coach: <?php echo esc_html($p['coach_name']); ?></span>
+                </div>
+
+                <div style="flex: 2; min-width: 180px;">
+                    <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Duration & Schedule</span>
+                    <span style="font-size: 12px; color: var(--sp-text-main);"><?php echo esc_html($p['sessions_count']); ?> Sessions (<?php echo esc_html($p['duration_days']); ?> Days)</span>
+                    <span style="font-size: 11px; color: var(--sp-text-muted); display: block;"><?php echo esc_html($p['schedule'] ? $p['schedule'] : 'Flexible'); ?></span>
+                </div>
+
+                <div style="flex: 1; min-width: 110px;">
+                    <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Capacity</span>
+                    <strong style="font-size: 13px; color: #000;"><?php echo esc_html($p['capacity']); ?> members</strong>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="sp-badge <?php echo $p['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                        <?php echo esc_html(ucfirst($p['status'])); ?>
+                    </span>
+
+                    <?php if (current_user_can('sportedia_manage_programs') || Sportedia_Roles::is_sys_admin()) : ?>
                         <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editProg(<?php echo json_encode($p); ?>)'>Edit</button>
                         <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteProg(<?php echo $p['id']; ?>)">Delete</button>
-                    </div>
-                <?php endif; ?>
+                    <?php endif; ?>
+                </div>
             </div>
         <?php endforeach; ?>
     </div>

@@ -57,7 +57,7 @@ $nationalitiesList = Sportedia_User_Manager::get_nationalities();
 
 <!-- Stacked Full-Width User Rows (Sorted Newest Registered First) -->
 <?php if (!empty($usersList)) : ?>
-    <div style="display: flex; flex-direction: column; gap: 12px;">
+    <div style="display: flex; flex-direction: column; gap: 12px;" id="users_container">
         <?php foreach ($usersList as $u) : ?>
             <div class="sp-card" style="margin-bottom: 0; padding: 16px 20px; border-radius: var(--sp-radius); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
                 <div style="display: flex; align-items: center; gap: 14px; flex: 2; min-width: 240px;">

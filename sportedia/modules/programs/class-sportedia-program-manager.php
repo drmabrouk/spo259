@@ -31,6 +31,64 @@ class Sportedia_Program_Manager {
     public function __construct() {
         add_action('wp_ajax_sportedia_save_program', array($this, 'ajax_save_program'));
         add_action('wp_ajax_sportedia_delete_program', array($this, 'ajax_delete_program'));
+        add_action('wp_ajax_sportedia_search_programs', array($this, 'ajax_search_programs'));
+    }
+
+    public function ajax_search_programs() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        $search        = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
+        $branch_filter = isset($_POST['branch_filter']) ? intval($_POST['branch_filter']) : 0;
+
+        $programs = self::get_programs($search, $branch_filter);
+
+        ob_start();
+        if (!empty($programs)) :
+            foreach ($programs as $p) : ?>
+                <div class="sp-card" style="margin-bottom: 0; padding: 16px 20px; border-radius: var(--sp-radius); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                    <div style="flex: 2; min-width: 220px;">
+                        <strong style="font-size: 15px; color: var(--sp-text-main); display: block;"><?php echo esc_html($p['program_name']); ?></strong>
+                        <span style="font-size: 11px; color: var(--sp-text-muted); text-transform: uppercase; font-weight: 600;"><?php echo esc_html($p['category']); ?></span>
+                    </div>
+
+                    <div style="flex: 2; min-width: 200px;">
+                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Branch & Coach</span>
+                        <strong style="font-size: 13px; color: #000;"><?php echo esc_html($p['branch_name']); ?></strong>
+                        <span style="font-size: 11px; color: var(--sp-text-muted); display: block;">Coach: <?php echo esc_html($p['coach_name']); ?></span>
+                    </div>
+
+                    <div style="flex: 2; min-width: 180px;">
+                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Duration & Schedule</span>
+                        <span style="font-size: 12px; color: var(--sp-text-main);"><?php echo esc_html($p['sessions_count']); ?> Sessions (<?php echo esc_html($p['duration_days']); ?> Days)</span>
+                        <span style="font-size: 11px; color: var(--sp-text-muted); display: block;"><?php echo esc_html($p['schedule'] ? $p['schedule'] : 'Flexible'); ?></span>
+                    </div>
+
+                    <div style="flex: 1; min-width: 110px;">
+                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Capacity</span>
+                        <strong style="font-size: 13px; color: #000;"><?php echo esc_html($p['capacity']); ?> members</strong>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="sp-badge <?php echo $p['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                            <?php echo esc_html(ucfirst($p['status'])); ?>
+                        </span>
+
+                        <?php if (current_user_can('sportedia_manage_programs') || Sportedia_Roles::is_sys_admin()) : ?>
+                            <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editProg(<?php echo json_encode($p); ?>)'>Edit</button>
+                            <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteProg(<?php echo $p['id']; ?>)">Delete</button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach;
+        else : ?>
+            <div class="sp-card" style="text-align: center; color: var(--sp-text-muted); padding: 48px;">
+                <h3>No training programs found</h3>
+                <p>No programs match your search query.</p>
+            </div>
+        <?php endif;
+        $html = ob_get_clean();
+
+        wp_send_json_success(array('html' => $html, 'count' => count($programs)));
     }
 
     public static function get_programs($search = '', $branch_id = 0, $coach_id = 0) {

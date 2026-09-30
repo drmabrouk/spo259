@@ -63,6 +63,67 @@ class Sportedia_User_Manager {
         add_action('wp_ajax_sportedia_delete_user', array($this, 'ajax_delete_user'));
         add_action('wp_ajax_sportedia_upload_avatar', array($this, 'ajax_upload_avatar'));
         add_action('wp_ajax_sportedia_update_my_profile', array($this, 'ajax_update_my_profile'));
+        add_action('wp_ajax_sportedia_search_users', array($this, 'ajax_search_users'));
+    }
+
+    public function ajax_search_users() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        if (!current_user_can('sportedia_manage_users') && !Sportedia_Roles::is_sys_admin()) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $search    = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
+        $role      = isset($_POST['role_filter']) ? sanitize_text_field($_POST['role_filter']) : '';
+        $branch_id = isset($_POST['branch_filter']) ? intval($_POST['branch_filter']) : 0;
+
+        $usersList = self::get_users($search, $role, $branch_id);
+
+        ob_start();
+        if (!empty($usersList)) :
+            foreach ($usersList as $u) : ?>
+                <div class="sp-card" style="margin-bottom: 0; padding: 16px 20px; border-radius: var(--sp-radius); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                    <div style="display: flex; align-items: center; gap: 14px; flex: 2; min-width: 240px;">
+                        <?php if (!empty($u['avatar_url'])) : ?>
+                            <img src="<?php echo esc_url($u['avatar_url']); ?>" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1px solid var(--sp-border-color);">
+                        <?php else : ?>
+                            <div class="sp-user-avatar" style="width: 44px; height: 44px; font-size: 16px; font-weight: 700;"><?php echo esc_html(strtoupper(substr($u['name'], 0, 1))); ?></div>
+                        <?php endif; ?>
+                        <div>
+                            <strong style="font-size: 16px; color: var(--sp-text-main); display: block;"><?php echo esc_html($u['name']); ?></strong>
+                            <span style="font-size: 11px; color: var(--sp-text-muted); font-family: monospace;">ID: <?php echo esc_html($u['employee_id']); ?> | <?php echo esc_html($u['email']); ?></span>
+                        </div>
+                    </div>
+
+                    <div style="flex: 1; min-width: 160px; font-size: 12px;">
+                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Role</span>
+                        <strong><?php echo esc_html($u['role']); ?></strong>
+                    </div>
+
+                    <div style="flex: 1; min-width: 140px; font-size: 12px;">
+                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Nationality / Phone</span>
+                        <span><?php echo esc_html($u['nationality'] ? $u['nationality'] : 'N/A'); ?> | <?php echo esc_html($u['phone'] ? $u['phone'] : 'N/A'); ?></span>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="sp-badge <?php echo $u['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                            <?php echo esc_html(ucfirst($u['status'])); ?>
+                        </span>
+
+                        <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editUser(<?php echo json_encode($u); ?>)'>Edit Profile</button>
+                        <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteUser(<?php echo $u['id']; ?>)">Delete</button>
+                    </div>
+                </div>
+            <?php endforeach;
+        else : ?>
+            <div class="sp-card" style="text-align: center; color: var(--sp-text-muted); padding: 48px;">
+                <h3>No system users found</h3>
+                <p>No user accounts match your search query.</p>
+            </div>
+        <?php endif;
+        $html = ob_get_clean();
+
+        wp_send_json_success(array('html' => $html, 'count' => count($usersList)));
     }
 
     public static function get_users($search = '', $role = '', $branch_id = 0) {
