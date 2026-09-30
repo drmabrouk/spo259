@@ -26,41 +26,32 @@ $branches = Sportedia_Branch_Manager::get_branches($search);
     </form>
 </div>
 
-<!-- Modern Cards Display (Exactly 2 Cards Per Row on Desktop) -->
+<!-- Unified Full-Width Extended Rows Layout (1 Row Per Branch) -->
 <?php if (!empty($branches)) : ?>
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+    <div style="display: flex; flex-direction: column; gap: 12px;" id="branches_container">
         <?php foreach ($branches as $b) : ?>
-            <div class="sp-card" style="margin-bottom: 0; padding: 18px; border-radius: var(--sp-radius); display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                        <div>
-                            <strong style="font-size: 16px; color: var(--sp-text-main); display: block;"><?php echo esc_html($b['branch_name']); ?></strong>
-                            <code style="font-size: 11px; background: #f3f4f6; padding: 2px 6px; border-radius: 4px;"><?php echo esc_html($b['code']); ?></code>
-                        </div>
-                        <span class="sp-badge <?php echo $b['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
-                            <?php echo esc_html(ucfirst($b['status'])); ?>
-                        </span>
-                    </div>
-
-                    <div style="background: #f8f9fa; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 12px; font-size: 12px; margin-bottom: 14px;">
-                        <div style="margin-bottom: 6px;">
-                            <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">PHONE</span>
-                            <span><?php echo esc_html($b['phone'] ? $b['phone'] : 'N/A'); ?></span>
-                        </div>
-                        <div style="margin-bottom: 6px;">
-                            <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">EMAIL</span>
-                            <span><?php echo esc_html($b['email'] ? $b['email'] : 'N/A'); ?></span>
-                        </div>
-                        <?php if (!empty($b['address'])) : ?>
-                            <div style="margin-top: 6px; border-top: 1px dashed var(--sp-border-color); padding-top: 6px;">
-                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">ADDRESS</span>
-                                <span><?php echo esc_html($b['address']); ?></span>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+            <div class="sp-card" style="margin-bottom: 0; padding: 16px 20px; border-radius: var(--sp-radius); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                <div style="flex: 2; min-width: 220px;">
+                    <strong style="font-size: 15px; color: var(--sp-text-main); display: block;"><?php echo esc_html($b['branch_name']); ?></strong>
+                    <code style="font-size: 11px; background: #f3f4f6; padding: 2px 6px; border-radius: 4px;"><?php echo esc_html($b['code']); ?></code>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--sp-border-color); padding-top: 10px; margin-top: auto;">
+                <div style="flex: 2; min-width: 200px;">
+                    <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Contact Info</span>
+                    <strong style="font-size: 13px; color: #000;"><?php echo esc_html($b['phone'] ? $b['phone'] : 'N/A'); ?></strong>
+                    <span style="font-size: 11px; color: var(--sp-text-muted); display: block;"><?php echo esc_html($b['email'] ? $b['email'] : 'N/A'); ?></span>
+                </div>
+
+                <div style="flex: 3; min-width: 240px;">
+                    <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Location / Address</span>
+                    <span style="font-size: 12px; color: var(--sp-text-main);"><?php echo esc_html($b['address'] ? $b['address'] : 'No physical address specified.'); ?></span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="sp-badge <?php echo $b['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                        <?php echo esc_html(ucfirst($b['status'])); ?>
+                    </span>
+
                     <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editBranch(<?php echo json_encode($b); ?>)'>Edit</button>
                     <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteBranch(<?php echo $b['id']; ?>)">Delete</button>
                 </div>

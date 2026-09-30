@@ -16,6 +16,64 @@ class Sportedia_Subscription_Manager {
         add_action('wp_ajax_sportedia_delete_subscription', array($this, 'ajax_delete_subscription'));
         add_action('wp_ajax_sportedia_verify_member_session', array($this, 'ajax_verify_member_session'));
         add_action('wp_ajax_nopriv_sportedia_verify_member_session', array($this, 'ajax_verify_member_session'));
+        add_action('wp_ajax_sportedia_search_subscriptions', array($this, 'ajax_search_subscriptions'));
+    }
+
+    public function ajax_search_subscriptions() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        $search        = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
+        $branch_filter = isset($_POST['branch_filter']) ? intval($_POST['branch_filter']) : 0;
+        $status_filter = isset($_POST['status_filter']) ? sanitize_text_field($_POST['status_filter']) : '';
+
+        $subscriptions = self::get_subscriptions($search, $branch_filter, $status_filter);
+
+        ob_start();
+        if (!empty($subscriptions)) :
+            foreach ($subscriptions as $s) : ?>
+                <div class="sp-card" style="margin-bottom: 0; padding: 16px 20px; border-radius: var(--sp-radius); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                    <div style="flex: 2; min-width: 220px;">
+                        <strong style="font-size: 15px; color: var(--sp-text-main); display: block;"><?php echo esc_html($s['member_name']); ?></strong>
+                        <span style="font-size: 11px; color: var(--sp-text-muted); font-family: monospace;">ID: <?php echo esc_html($s['employee_id']); ?></span>
+                    </div>
+
+                    <div style="flex: 2; min-width: 200px;">
+                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Plan & Type</span>
+                        <strong style="font-size: 13px; color: #000;"><?php echo esc_html($s['plan_name']); ?></strong>
+                        <span style="font-size: 11px; color: var(--sp-text-muted); display: block;"><?php echo esc_html(ucfirst($s['subscription_type'])); ?> | <?php echo esc_html($s['branch_name']); ?></span>
+                    </div>
+
+                    <div style="flex: 2; min-width: 180px;">
+                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Validity Period</span>
+                        <span style="font-size: 12px; font-family: monospace; color: var(--sp-text-main);"><?php echo esc_html($s['start_date'] . ' &rarr; ' . $s['end_date']); ?></span>
+                    </div>
+
+                    <div style="flex: 1; min-width: 130px;">
+                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Price</span>
+                        <strong style="font-size: 14px; color: #000;"><?php echo esc_html(Sportedia_Finance::format_price($s['price'])); ?></strong>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="sp-badge <?php echo $s['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                            <?php echo esc_html(ucfirst($s['status'])); ?>
+                        </span>
+
+                        <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='viewA5Invoice(<?php echo json_encode($s); ?>)' title="Print Invoice">Invoice</button>
+                        <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='viewA6Card(<?php echo json_encode($s); ?>)' title="Membership Card">Card</button>
+                        <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editSub(<?php echo json_encode($s); ?>)'>Edit</button>
+                        <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteSub(<?php echo $s['id']; ?>)">Delete</button>
+                    </div>
+                </div>
+            <?php endforeach;
+        else : ?>
+            <div class="sp-card" style="text-align: center; color: var(--sp-text-muted); padding: 48px;">
+                <h3>No subscriptions found</h3>
+                <p>No subscription records match your search criteria.</p>
+            </div>
+        <?php endif;
+        $html = ob_get_clean();
+
+        wp_send_json_success(array('html' => $html, 'count' => count($subscriptions)));
     }
 
     public static function auto_update_expired_subscriptions() {

@@ -30,6 +30,8 @@ class Sportedia_Dashboard {
         $today = date('Y-m-d');
         $today_att  = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $att_table WHERE attendance_date = %s AND status = 'present'", $today));
 
+        $active_members = $wpdb->get_var("SELECT COUNT(DISTINCT user_id) FROM $subs_table WHERE status = 'active'");
+
         $total_users    = count_users()['total_users'];
 
         return array(
@@ -38,6 +40,7 @@ class Sportedia_Dashboard {
             'total_programs'           => $total_programs ? intval($total_programs) : 0,
             'today_att'                => $today_att ? intval($today_att) : 0,
             'total_users'              => $total_users ? intval($total_users) : 0,
+            'active_members'           => $active_members ? intval($active_members) : 0,
             'total_sessions_remaining' => $sess_remain ? intval($sess_remain) : 0,
         );
     }

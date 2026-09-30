@@ -14,6 +14,54 @@ class Sportedia_Branch_Manager {
     public function __construct() {
         add_action('wp_ajax_sportedia_save_branch', array($this, 'ajax_save_branch'));
         add_action('wp_ajax_sportedia_delete_branch', array($this, 'ajax_delete_branch'));
+        add_action('wp_ajax_sportedia_search_branches', array($this, 'ajax_search_branches'));
+    }
+
+    public function ajax_search_branches() {
+        check_ajax_referer('sportedia_nonce', 'nonce');
+
+        $search = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
+        $branches = self::get_branches($search);
+
+        ob_start();
+        if (!empty($branches)) :
+            foreach ($branches as $b) : ?>
+                <div class="sp-card" style="margin-bottom: 0; padding: 16px 20px; border-radius: var(--sp-radius); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                    <div style="flex: 2; min-width: 220px;">
+                        <strong style="font-size: 15px; color: var(--sp-text-main); display: block;"><?php echo esc_html($b['branch_name']); ?></strong>
+                        <code style="font-size: 11px; background: #f3f4f6; padding: 2px 6px; border-radius: 4px;"><?php echo esc_html($b['code']); ?></code>
+                    </div>
+
+                    <div style="flex: 2; min-width: 200px;">
+                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Contact Info</span>
+                        <strong style="font-size: 13px; color: #000;"><?php echo esc_html($b['phone'] ? $b['phone'] : 'N/A'); ?></strong>
+                        <span style="font-size: 11px; color: var(--sp-text-muted); display: block;"><?php echo esc_html($b['email'] ? $b['email'] : 'N/A'); ?></span>
+                    </div>
+
+                    <div style="flex: 3; min-width: 240px;">
+                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Location / Address</span>
+                        <span style="font-size: 12px; color: var(--sp-text-main);"><?php echo esc_html($b['address'] ? $b['address'] : 'No physical address specified.'); ?></span>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="sp-badge <?php echo $b['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                            <?php echo esc_html(ucfirst($b['status'])); ?>
+                        </span>
+
+                        <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editBranch(<?php echo json_encode($b); ?>)'>Edit</button>
+                        <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteBranch(<?php echo $b['id']; ?>)">Delete</button>
+                    </div>
+                </div>
+            <?php endforeach;
+        else : ?>
+            <div class="sp-card" style="text-align: center; color: var(--sp-text-muted); padding: 48px;">
+                <h3>No branches found</h3>
+                <p>No operational branches match your query.</p>
+            </div>
+        <?php endif;
+        $html = ob_get_clean();
+
+        wp_send_json_success(array('html' => $html, 'count' => count($branches)));
     }
 
     public static function get_branches($search = '') {

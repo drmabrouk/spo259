@@ -73,72 +73,41 @@ foreach ((array)$curr_u->roles as $r) {
     </form>
 </div>
 
-<!-- Modern Cards Display (Exactly 2 Cards Per Row on Desktop) -->
+<!-- Unified Full-Width Extended Rows Layout (1 Row Per Subscription) -->
 <?php if (!empty($subscriptions)) : ?>
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+    <div style="display: flex; flex-direction: column; gap: 12px;" id="subscriptions_container">
         <?php foreach ($subscriptions as $s) : ?>
-            <div class="sp-card" style="margin-bottom: 0; padding: 18px; border-radius: var(--sp-radius); display: flex; flex-direction: column; justify-content: space-between; position: relative;">
-                <div>
-                    <!-- Header Badges -->
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-                        <div>
-                            <strong style="font-size: 15px; color: var(--sp-text-main); display: block;"><?php echo esc_html($s['member_name']); ?></strong>
-                            <span style="font-size: 11px; color: var(--sp-text-muted); font-family: monospace;"><?php echo esc_html($s['employee_id']); ?></span>
-                        </div>
-                        <span class="sp-badge <?php echo $s['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
-                            <?php echo esc_html(ucfirst($s['status'])); ?>
-                        </span>
-                    </div>
-
-                    <!-- Details Grid -->
-                    <div style="background: #f8f9fa; border: 1px solid var(--sp-border-color); border-radius: 8px; padding: 12px; font-size: 12px; margin-bottom: 14px;">
-                        <div style="margin-bottom: 6px;">
-                            <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">PLAN NAME</span>
-                            <strong style="font-size: 13px; color: #000;"><?php echo esc_html($s['plan_name']); ?></strong>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
-                            <div>
-                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">TYPE</span>
-                                <span><?php echo esc_html(ucfirst($s['subscription_type'])); ?></span>
-                            </div>
-                            <div>
-                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">BRANCH</span>
-                                <span><?php echo esc_html($s['branch_name']); ?></span>
-                            </div>
-                            <div>
-                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">START DATE</span>
-                                <span style="font-family: monospace;"><?php echo esc_html($s['start_date']); ?></span>
-                            </div>
-                            <div>
-                                <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">END DATE</span>
-                                <span style="font-family: monospace;"><?php echo esc_html($s['end_date']); ?></span>
-                            </div>
-                        </div>
-
-                        <?php if ($can_view_session_count) : ?>
-                            <div style="margin-top: 8px; border-top: 1px dashed var(--sp-border-color); padding-top: 6px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 11px; color: var(--sp-text-muted);">SESSIONS REMAINING</span>
-                                <span class="sp-badge">
-                                    <?php echo esc_html(intval($s['sessions_used'] ?? 0)); ?> / <?php echo esc_html(intval($s['sessions_count'] ?? 12)); ?> Used
-                                </span>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+            <div class="sp-card" style="margin-bottom: 0; padding: 16px 20px; border-radius: var(--sp-radius); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                <div style="flex: 2; min-width: 220px;">
+                    <strong style="font-size: 15px; color: var(--sp-text-main); display: block;"><?php echo esc_html($s['member_name']); ?></strong>
+                    <span style="font-size: 11px; color: var(--sp-text-muted); font-family: monospace;">ID: <?php echo esc_html($s['employee_id']); ?></span>
                 </div>
 
-                <!-- Footer Pricing & Actions -->
-                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--sp-border-color); padding-top: 12px; margin-top: auto;">
-                    <div>
-                        <span style="font-size: 10px; color: var(--sp-text-muted); display: block;">TOTAL PRICE</span>
-                        <strong style="font-size: 15px; color: #000;"><?php echo esc_html(Sportedia_Finance::format_price($s['price'])); ?></strong>
-                    </div>
+                <div style="flex: 2; min-width: 200px;">
+                    <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Plan & Type</span>
+                    <strong style="font-size: 13px; color: #000;"><?php echo esc_html($s['plan_name']); ?></strong>
+                    <span style="font-size: 11px; color: var(--sp-text-muted); display: block;"><?php echo esc_html(ucfirst($s['subscription_type'])); ?> | <?php echo esc_html($s['branch_name']); ?></span>
+                </div>
 
-                    <div style="display: flex; gap: 6px;">
-                        <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='viewA5Invoice(<?php echo json_encode($s); ?>)' title="Print Invoice">Invoice</button>
-                        <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='viewA6Card(<?php echo json_encode($s); ?>)' title="Membership Card">Card</button>
-                        <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editSub(<?php echo json_encode($s); ?>)'>Edit</button>
-                        <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteSub(<?php echo $s['id']; ?>)">Delete</button>
-                    </div>
+                <div style="flex: 2; min-width: 180px;">
+                    <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Validity Period</span>
+                    <span style="font-size: 12px; font-family: monospace; color: var(--sp-text-main);"><?php echo esc_html($s['start_date'] . ' &rarr; ' . $s['end_date']); ?></span>
+                </div>
+
+                <div style="flex: 1; min-width: 130px;">
+                    <span style="font-size: 10px; color: var(--sp-text-muted); display: block; text-transform: uppercase;">Price</span>
+                    <strong style="font-size: 14px; color: #000;"><?php echo esc_html(Sportedia_Finance::format_price($s['price'])); ?></strong>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="sp-badge <?php echo $s['status'] === 'active' ? 'sp-badge-active' : 'sp-badge-inactive'; ?>">
+                        <?php echo esc_html(ucfirst($s['status'])); ?>
+                    </span>
+
+                    <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='viewA5Invoice(<?php echo json_encode($s); ?>)' title="Print Invoice">Invoice</button>
+                    <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='viewA6Card(<?php echo json_encode($s); ?>)' title="Membership Card">Card</button>
+                    <button class="sp-btn sp-btn-secondary sp-btn-sm" onclick='editSub(<?php echo json_encode($s); ?>)'>Edit</button>
+                    <button class="sp-btn sp-btn-secondary sp-btn-sm" style="color:#dc2626;" onclick="deleteSub(<?php echo $s['id']; ?>)">Delete</button>
                 </div>
             </div>
         <?php endforeach; ?>
