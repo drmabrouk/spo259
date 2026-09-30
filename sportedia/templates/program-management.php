@@ -56,9 +56,9 @@ foreach ((array)$curr_u->roles as $r) {
     </form>
 </div>
 
-<!-- Cards Display (Sorted Newest to Oldest) -->
+<!-- Cards Display (Exactly 2 Cards Per Row on Desktop) -->
 <?php if (!empty($programs)) : ?>
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
         <?php foreach ($programs as $p) : ?>
             <div class="sp-card" style="margin-bottom: 0; padding: 18px; border-radius: var(--sp-radius); display: flex; flex-direction: column; justify-content: space-between;">
                 <div>

@@ -21,15 +21,22 @@ foreach ((array)$curr_u->roles as $r) {
 }
 ?>
 
+<?php $export_nonce = wp_create_nonce('sportedia_nonce'); ?>
 <div class="sp-page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
     <div>
         <h1 class="sp-page-title">Subscription Management</h1>
         <p class="sp-page-subtitle">Track customer memberships, subscription plans, start/end dates, and statuses.</p>
     </div>
-    <button class="sp-btn sp-btn-primary" onclick="openSubModal()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        New Subscription / Registration
-    </button>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="<?php echo esc_url(admin_url('admin-ajax.php?action=sportedia_export_csv&export_type=subscriptions&search=' . urlencode($search) . '&branch_filter=' . $branch_filter . '&status_filter=' . urlencode($status_filter) . '&nonce=' . $export_nonce)); ?>" class="sp-btn sp-btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Export to Excel / CSV
+        </a>
+        <button class="sp-btn sp-btn-primary" onclick="openSubModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Subscription / Registration
+        </button>
+    </div>
 </div>
 
 <!-- Combined Filter Bar -->
@@ -66,9 +73,9 @@ foreach ((array)$curr_u->roles as $r) {
     </form>
 </div>
 
-<!-- Modern Cards Display (Sorted Newest to Oldest) -->
+<!-- Modern Cards Display (Exactly 2 Cards Per Row on Desktop) -->
 <?php if (!empty($subscriptions)) : ?>
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px;">
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
         <?php foreach ($subscriptions as $s) : ?>
             <div class="sp-card" style="margin-bottom: 0; padding: 18px; border-radius: var(--sp-radius); display: flex; flex-direction: column; justify-content: space-between; position: relative;">
                 <div>

@@ -7,7 +7,6 @@ class Sportedia_Template_Loader {
         add_filter('template_include', array($this, 'load_sportedia_template'), 99);
         add_shortcode('sportedia_app', array($this, 'shortcode_app'));
         add_shortcode('sportedia_kiosk', array($this, 'shortcode_kiosk'));
-        add_shortcode('sportedia_secondary', array($this, 'shortcode_secondary'));
         add_shortcode('sportedia_member', array($this, 'shortcode_member'));
     }
 
@@ -38,19 +37,6 @@ class Sportedia_Template_Loader {
         return false;
     }
 
-    public static function is_secondary_page() {
-        global $post;
-        $sec_id = get_option('sportedia_secondary_page_id');
-
-        if (is_page($sec_id) || is_page('sportedia-secondary')) {
-            return true;
-        }
-        if ($post && (has_shortcode($post->post_content, 'sportedia_secondary') || strpos($post->post_content, '<!-- sportedia_secondary -->') !== false)) {
-            return true;
-        }
-        return false;
-    }
-
     public static function is_member_portal_page() {
         global $post;
         $mem_id = get_option('sportedia_member_page_id');
@@ -68,19 +54,12 @@ class Sportedia_Template_Loader {
     }
 
     public static function is_sportedia_page() {
-        return self::is_dashboard_page() || self::is_kiosk_page() || self::is_secondary_page() || self::is_member_portal_page();
+        return self::is_dashboard_page() || self::is_kiosk_page() || self::is_member_portal_page();
     }
 
     public function load_sportedia_template($template) {
         if (self::is_member_portal_page()) {
             return SPORTEDIA_PLUGIN_DIR . 'templates/member-portal.php';
-        }
-
-        if (self::is_secondary_page()) {
-            if (!is_user_logged_in()) {
-                return SPORTEDIA_PLUGIN_DIR . 'templates/login-form.php';
-            }
-            return SPORTEDIA_PLUGIN_DIR . 'templates/secondary-layout.php';
         }
 
         if (self::is_kiosk_page()) {
@@ -125,17 +104,6 @@ class Sportedia_Template_Loader {
         }
         ob_start();
         include SPORTEDIA_PLUGIN_DIR . 'templates/verification-system.php';
-        return ob_get_clean();
-    }
-
-    public function shortcode_secondary() {
-        if (!is_user_logged_in()) {
-            ob_start();
-            include SPORTEDIA_PLUGIN_DIR . 'templates/login-form.php';
-            return ob_get_clean();
-        }
-        ob_start();
-        include SPORTEDIA_PLUGIN_DIR . 'templates/secondary-layout.php';
         return ob_get_clean();
     }
 }

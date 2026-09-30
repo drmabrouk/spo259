@@ -25,7 +25,7 @@ foreach ((array)$curr_u->roles as $r) {
         <p class="sp-page-subtitle">Track assigned sports coaches, active member allocations, and verified completed sessions.</p>
     </div>
     <div>
-        <a href="<?php echo esc_url(admin_url('admin-ajax.php?action=sportedia_export_coaches_excel&search=' . urlencode($search) . '&nonce=' . $export_nonce)); ?>" class="sp-btn sp-btn-primary sp-btn-sm" style="background-color: #0284c7; border-color: #0284c7;">
+        <a href="<?php echo esc_url(admin_url('admin-ajax.php?action=sportedia_export_coaches_excel&search=' . urlencode($search) . '&nonce=' . $export_nonce)); ?>" class="sp-btn sp-btn-primary sp-btn-sm">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export to Excel (.XLS)
         </a>
