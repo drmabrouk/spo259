@@ -54,6 +54,9 @@ $module = isset($_GET['module']) ? sanitize_text_field($_GET['module']) : 'dashb
                     echo '<div class="sp-card"><h3>Access Denied</h3><p>You do not have permission to access coach management.</p></div>';
                 }
                 break;
+            case 'tournaments':
+                include SPORTEDIA_PLUGIN_DIR . 'templates/tournament-management.php';
+                break;
             case 'attendance':
                 if (current_user_can('sportedia_manage_attendance') || Sportedia_Roles::is_sys_admin()) {
                     include SPORTEDIA_PLUGIN_DIR . 'templates/attendance-management.php';

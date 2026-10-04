@@ -18,6 +18,19 @@ class Sportedia_Coach_Manager {
     public function handle_export_coaches_excel() {
         check_ajax_referer('sportedia_nonce', 'nonce');
 
+        $curr_u = wp_get_current_user();
+        $allowed_roles = array('sportedia_sys_admin', 'sportedia_general_mgr', 'sportedia_admin_mgr', 'sportedia_facility_mgr', 'sportedia_ops_mgr', 'sportedia_finance_mgr', 'administrator');
+        $has_perm = false;
+        foreach ((array)$curr_u->roles as $r) {
+            if (in_array($r, $allowed_roles, true) || current_user_can('manage_options')) {
+                $has_perm = true;
+                break;
+            }
+        }
+        if (!$has_perm) {
+            wp_die('Unauthorized. Coach data export is restricted to authorized management staff.');
+        }
+
         @set_time_limit(300);
         $search = isset($_GET['search']) ? sanitize_text_field($_GET['search']) : '';
         $coaches = self::get_coaches_summary($search);

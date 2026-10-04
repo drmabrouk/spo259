@@ -262,6 +262,94 @@ class Sportedia_DB {
         dbDelta($sql_sec_attendance);
         dbDelta($sql_sec_daily_reports);
         dbDelta($sql_sec_eod_records);
+
+        // =========================================================================
+        // TOURNAMENT MANAGEMENT TABLES
+        // =========================================================================
+
+        // 14. Tournaments Table
+        $table_tournaments = $wpdb->prefix . 'sportedia_tournaments';
+        $sql_tournaments = "CREATE TABLE $table_tournaments (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            tournament_name varchar(191) NOT NULL,
+            sport varchar(100) DEFAULT 'Football' NOT NULL,
+            category varchar(100) DEFAULT 'Open' NOT NULL,
+            description text DEFAULT '',
+            branch_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
+            start_date datetime NOT NULL,
+            end_date datetime NOT NULL,
+            reg_open_date datetime NOT NULL,
+            reg_close_date datetime NOT NULL,
+            team_limit int(11) DEFAULT 16 NOT NULL,
+            players_per_team int(11) DEFAULT 7 NOT NULL,
+            max_substitutes int(11) DEFAULT 5 NOT NULL,
+            status varchar(50) DEFAULT 'open' NOT NULL,
+            rules_notes text DEFAULT '',
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY (id),
+            KEY branch_id (branch_id),
+            KEY status (status)
+        ) $charset_collate;";
+
+        // 15. Tournament Teams Table
+        $table_tournament_teams = $wpdb->prefix . 'sportedia_tournament_teams';
+        $sql_tournament_teams = "CREATE TABLE $table_tournament_teams (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            tournament_id bigint(20) UNSIGNED NOT NULL,
+            coach_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
+            team_name varchar(191) NOT NULL,
+            status varchar(50) DEFAULT 'submitted' NOT NULL,
+            submitted_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY (id),
+            KEY tournament_id (tournament_id),
+            KEY coach_id (coach_id)
+        ) $charset_collate;";
+
+        // 16. Tournament Players Roster Table
+        $table_tournament_players = $wpdb->prefix . 'sportedia_tournament_players';
+        $sql_tournament_players = "CREATE TABLE $table_tournament_players (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            team_id bigint(20) UNSIGNED NOT NULL,
+            tournament_id bigint(20) UNSIGNED NOT NULL,
+            user_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
+            player_name varchar(191) NOT NULL,
+            employee_id varchar(100) DEFAULT '' NOT NULL,
+            phone varchar(50) DEFAULT '' NOT NULL,
+            dob date DEFAULT NULL,
+            position_role varchar(100) DEFAULT 'Player' NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY (id),
+            KEY team_id (team_id),
+            KEY tournament_id (tournament_id),
+            KEY user_id (user_id)
+        ) $charset_collate;";
+
+        // 17. Tournament Match Fixtures & Brackets Table
+        $table_tournament_fixtures = $wpdb->prefix . 'sportedia_tournament_fixtures';
+        $sql_tournament_fixtures = "CREATE TABLE $table_tournament_fixtures (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            tournament_id bigint(20) UNSIGNED NOT NULL,
+            round_number int(11) DEFAULT 1 NOT NULL,
+            match_number int(11) DEFAULT 1 NOT NULL,
+            team1_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
+            team2_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
+            match_date datetime DEFAULT NULL,
+            team1_score int(11) DEFAULT 0 NOT NULL,
+            team2_score int(11) DEFAULT 0 NOT NULL,
+            winner_team_id bigint(20) UNSIGNED DEFAULT 0 NOT NULL,
+            status varchar(50) DEFAULT 'scheduled' NOT NULL,
+            notes text DEFAULT '',
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY (id),
+            KEY tournament_id (tournament_id),
+            KEY round_number (round_number)
+        ) $charset_collate;";
+
+        dbDelta($sql_tournaments);
+        dbDelta($sql_tournament_teams);
+        dbDelta($sql_tournament_players);
+        dbDelta($sql_tournament_fixtures);
     }
 
     public static function log_activity($action, $details = '', $user_id = 0) {
